@@ -1,0 +1,4157 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>護理師排班表編輯器</title>
+    <link rel="stylesheet" href="schedule-editor.css">
+</head>
+<body>
+    <div class="container">
+        <h1>護理師排班表編輯器</h1>
+        
+        <div id="notification" class="notification"></div>
+        
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <button id="btnAddEmployee">新增護理師</button>
+                <select id="yearSelector"></select>
+                <select id="monthSelector"></select>
+                <button id="btnGenerateTable" class="secondary">產生排班表</button>
+            </div>
+            <div class="toolbar-group">
+                <button id="btnUndo" class="tool" title="復原 (Ctrl+Z)"><i class="fas fa-undo"></i> 復原</button>
+                <button id="btnRedo" class="tool" title="取消復原 (Ctrl+Y)"><i class="fas fa-redo"></i> 重做</button>
+                <button id="btnClear" class="danger" title="清除所有排班">清除排班</button>
+            </div>
+            <div class="toolbar-group">
+                <button id="btnSave">儲存</button>
+                <button id="btnLoad">載入</button>
+                <button id="btnExportExcel">匯出Excel</button>
+            </div>
+        </div>
+
+        <div id="clearConfirmModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>確認清除</h2>
+                <p>確定要清除所有排班嗎？此操作無法復原。</p>
+                <div class="modal-actions">
+                    <button id="btnConfirmClear" class="danger">確認清除</button>
+                    <button id="btnCancelClear" class="secondary">取消</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tabs">
+            <div class="tab active" data-tab="schedule">排班表</div>
+            <div class="tab" data-tab="preferences">護理師設置</div>
+        </div>
+        
+        <div id="scheduleTab" class="tab-content active">
+            <div class="schedule-controls">
+                <button id="scrollLeft">← 向左滾動</button>
+                <button id="scrollRight">向右滾動 →</button>
+                <span>使用滾輪或這些按鈕來水平滾動表格</span>
+            </div>
+            <div id="scheduleTableContainer" class="schedule-container">
+                <table id="scheduleTable" class="schedule-table">
+                    <thead>
+                        <tr id="headerRow">
+                            <th>護理師 / 日期</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="keyboard-shortcuts-guide">
+                <h3>鍵盤快捷鍵指南</h3>
+                <div class="shortcuts-container">
+                    <div class="shortcut-group">
+                        <div class="shortcut-title">班別輸入快捷鍵:</div>
+                        <div class="shortcut-item">
+                            <span class="shift-sample D-sample"></span>
+                            <span class="key">d</span> 或 <span class="key">1</span> = D班 (日班)
+                        </div>
+                        <div class="shortcut-item">
+                            <span class="shift-sample E-sample"></span>
+                            <span class="key">e</span> 或 <span class="key">2</span> = E班 (白班)
+                        </div>
+                        <div class="shortcut-item">
+                            <span class="shift-sample N-sample"></span>
+                            <span class="key">n</span> 或 <span class="key">3</span> = N班 (夜班)
+                        </div>
+                        <div class="shortcut-item">
+                            <span class="shift-sample OFF-sample"></span>
+                            <span class="key">o</span> 或 <span class="key">0</span> 或 <span class="key">4</span> = OFF (休假)
+                        </div>
+                        <div class="shortcut-item">
+                            <span class="shift-sample P-sample"></span>
+                            <span class="key">p</span> 或 <span class="key">5</span> = P (預假)
+                        </div>
+                    </div>
+                    <div class="shortcut-group">
+                        <div class="shortcut-title">班別說明:</div>
+                        <div class="shortcut-item">
+                            <span>預假(P)同樣計入休假天數，但有不同顏色以便區分</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <span>休假和預假總數不能超過休假上限</span>
+                        </div>
+                    </div>
+                    <div class="shortcut-group">
+                        <div class="shortcut-title">表格導航:</div>
+                        <div class="shortcut-item"><span class="key">↑</span> = 上移</div>
+                        <div class="shortcut-item"><span class="key">↓</span> = 下移</div>
+                        <div class="shortcut-item"><span class="key">←</span> = 左移</div>
+                        <div class="shortcut-item"><span class="key">→</span> = 右移</div>
+                        <div class="shortcut-item"><span class="key">Enter</span> = 移至下一行</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="summary-container">
+                <div class="summary-title">班次統計</div>
+                <table class="summary-table" id="summaryTable">
+                    <thead>
+                        <tr>
+                            <th>護理師</th>
+                            <th>白班(E)</th>
+                            <th>日班(D)</th>
+                            <th>夜班(N)</th>
+                            <th>休假(OFF)</th>
+                            <th>預假(P)</th>
+                            <th>總班數</th>
+                            <th>休假天數</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summaryTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="preferencesTab" class="tab-content">
+            <div class="setting-section">
+                <div class="setting-title">休假天數標準設置</div>
+                <div class="vacation-settings">
+                    <div class="setting-row">
+                        <label for="normalNurseVacation">一般護理師休假天數：</label>
+                        <input type="number" id="normalNurseVacation" class="form-control" value="8" min="0" max="31">
+                    </div>
+                    <div class="setting-row">
+                        <label for="longVacationDays">長假護理師休假天數：</label>
+                        <input type="number" id="longVacationDays" class="form-control" value="13" min="0" max="31">
+                    </div>
+                    <div class="setting-row">
+                        <label for="partTimeVacationDays">半職護理師休假天數：</label>
+                        <input type="number" id="partTimeVacationDays" class="form-control" value="19" min="0" max="31">
+                    </div>
+                    <div class="setting-actions">
+                        <button id="btnApplyVacationSettings" class="secondary">應用休假設置</button>
+                        <button id="btnAutoAssignVacation" class="secondary">自動排休假</button>
+                    </div>
+                </div>
+            </div>
+            <div class="setting-section">
+                <div class="setting-title">班別人數設置</div>
+                <div class="shift-targets-settings">
+                    <div class="targets-title">全月班別目標人數</div>
+                
+                <div class="targets-row">
+                    <label for="d-shift-target">D班人數：</label>
+                    <input type="number" id="d-shift-target" min="0" max="20" value="8">
+                </div>
+                
+                <div class="targets-row">
+                    <label for="e-shift-target">E班人數：</label>
+                    <input type="number" id="e-shift-target" min="0" max="20" value="5">
+                </div>
+                
+                <div class="targets-row">
+                    <label for="n-shift-target">N班人數：</label>
+                    <input type="number" id="n-shift-target" min="0" max="20" value="3">
+                </div>
+                
+                <div class="settings-note">
+                    設定的人數將應用於整個月的每一天，作為班別人數目標
+                </div>
+                
+                <div class="targets-actions">
+                    <button id="applyShiftTargets" class="secondary">應用設置</button>
+                </div>
+                </div>
+            </div>
+            <div class="setting-section">
+                <div class="setting-title">護理師偏好設置</div>
+                <div style="margin-bottom: 15px;">
+                    <button id="btnAddEmployeeFromPreferences" class="secondary">新增護理師</button>
+                </div>
+                <table class="summary-table" id="preferencesTable">
+                    <thead>
+                        <tr>
+                            <th>護理師</th>
+                            <th>偏好班別</th>
+                            <th>Leader</th>
+                            <th>長假</th>
+                            <th>半職</th>
+                            <th>上月最後一天班別</th>
+                            <th>上月底上班天數</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="preferencesTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 新增護理師對話框 -->
+<div id="employeeModal" class="employee-modal">
+    <div class="employee-modal-content">
+        <span class="employee-modal-close">&times;</span>
+        <h2 id="employeeModalTitle">新增護理師</h2>
+        
+        <div class="form-group">
+            <label for="employeeName">護理師姓名</label>
+            <input type="text" id="employeeName" class="form-control" placeholder="請輸入護理師姓名">
+        </div>
+        
+        <div class="form-group">
+            <label for="employeePosition">標記</label>
+            <input type="text" id="employeePosition" class="form-control" placeholder="可選，如: (L)">
+        </div>
+        
+        <div class="form-row">
+            <div class="form-col">
+                <div class="form-group">
+                    <label>身份設置</label>
+                    <div class="form-check-group">
+                        <div class="form-check">
+                            <input type="checkbox" id="isLeader">
+                            <label for="isLeader">是否為Leader</label>
+                        </div>
+                        
+                        <div class="form-check">
+                            <input type="checkbox" id="hasLongVacation">
+                            <label for="hasLongVacation">是否放長假</label>
+                        </div>
+                        
+                        <div class="form-check">
+                            <input type="checkbox" id="isPartTime">
+                            <label for="isPartTime">是否為半職</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-col">
+                <div class="form-group">
+                    <label>偏好班別</label>
+                    <div class="form-check-group">
+                        <div class="form-check">
+                            <input type="checkbox" id="preferD" name="preferredShift" value="D">
+                            <label for="preferD">D班</label>
+                        </div>
+                        
+                        <div class="form-check">
+                            <input type="checkbox" id="preferE" name="preferredShift" value="E">
+                            <label for="preferE">E班</label>
+                        </div>
+                        
+                        <div class="form-check">
+                            <input type="checkbox" id="preferN" name="preferredShift" value="N">
+                            <label for="preferN">N班</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-group-title">上個月末排班資訊</div>
+        <div class="form-row">
+            <div class="form-col">
+                <div class="form-group">
+                    <label for="lastMonthShift">上個月最後一天班別</label>
+                    <select id="lastMonthShift" class="form-control">
+                        <option value="">- 請選擇 -</option>
+                        <option value="D">D</option>
+                        <option value="E">E</option>
+                        <option value="N">N</option>
+                        <option value="OFF">OFF</option>
+                        <option value="P">P</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-col">
+                <div class="form-group">
+                    <label for="lastMonthWorkDays">上個月底連續上班天數</label>
+                    <input type="number" id="lastMonthWorkDays" class="form-control" min="0" max="10" value="0">
+                    <p class="small text-muted" style="margin-top: 5px; font-size: 12px;">
+                        <span style="color: #F57F17;">*6天以上會以橙色警示</span>
+                        <span style="color: #D32F2F; margin-left: 5px;">*8天以上會以紅色警示</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <button id="btnConfirmEmployee" class="btn-submit">確認</button>
+    </div>
+</div>
+    
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 定義全局變數
+            let employees = [];
+            let scheduleData = {};
+            const shifts = ['E', 'D', 'N', 'OFF', 'P', '']; // 班次類型
+            const currentDate = new Date();
+            let selectedYear = currentDate.getFullYear();
+            let selectedMonth = currentDate.getMonth() + 1;
+            let editingEmployeeIndex = -1; // 用於編輯員工
+            
+            // 初始化年份和月份選擇器
+            const yearSelector = document.getElementById('yearSelector');
+            const monthSelector = document.getElementById('monthSelector');
+
+            // 獲取滾動按鈕和表格容器
+            const scrollLeftBtn = document.getElementById('scrollLeft');
+            const scrollRightBtn = document.getElementById('scrollRight');
+            const tableContainer = document.getElementById('scheduleTableContainer');
+            
+            
+            // 首次加载时应用
+            setTimeout(enhanceTableScrolling, 100);
+            // 向左滾動按鈕
+            scrollLeftBtn.addEventListener('click', function() {
+                tableContainer.scrollBy({ left: -200, behavior: 'smooth' });
+            });
+            
+            // 向右滾動按鈕
+            scrollRightBtn.addEventListener('click', function() {
+                tableContainer.scrollBy({ left: 200, behavior: 'smooth' });
+            });
+            //放假天數預設值
+            let vacationSettings = {
+                normalNurse: 8,
+                longVacation: 13,
+                partTime: 19
+            };
+            //設定每班人數
+            let shiftTargets = {
+                D: {}, // 每天D班目標人數
+                E: {}, // 每天E班目標人數
+                N: {}  // 每天N班目標人數
+            };
+            
+            // 統一設置不區分平日和週末
+            const defaultShiftTargets = {
+                D: 8, // D班默認人數
+                E: 5, // E班默認人數
+                N: 3  // N班默認人數
+            };
+
+            // 歷史記錄相關變數
+            let historyStack = []; // 用於復原操作的歷史記錄
+            let redoStack = []; // 用於重做操作的記錄
+            const maxHistorySize = 30; // 最大歷史記錄數量
+            let isUndoingOrRedoing = false; // 防止復原/重做操作期間再次觸發歷史記錄保存
+
+            // 獲取復原、重做和清除按鈕
+            const undoBtn = document.getElementById('btnUndo');
+            const redoBtn = document.getElementById('btnRedo');
+            const clearBtn = document.getElementById('btnClear');
+            const confirmClearBtn = document.getElementById('btnConfirmClear');
+            const cancelClearBtn = document.getElementById('btnCancelClear');
+            const clearConfirmModal = document.getElementById('clearConfirmModal');
+
+            // 清除確認對話框關閉按鈕
+            const clearModalClose = clearConfirmModal.querySelector('.close');
+
+            // 初始狀態下禁用復原和重做按鈕
+            undoBtn.disabled = true;
+            redoBtn.disabled = true;
+
+            // 綁定休假設置相關按鈕事件
+            document.getElementById('btnApplyVacationSettings').addEventListener('click', applyVacationSettings);
+            document.getElementById('btnAutoAssignVacation').addEventListener('click', autoAssignVacation);
+            
+            // 填充年份選擇器（今年和未來4年）
+            for (let year = currentDate.getFullYear(); year <= currentDate.getFullYear() + 4; year++) {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year + '年';
+                if (year === selectedYear) {
+                    option.selected = true;
+                }
+                yearSelector.appendChild(option);
+            }
+            
+            // 填充月份選擇器
+            for (let month = 1; month <= 12; month++) {
+                const option = document.createElement('option');
+                option.value = month;
+                option.textContent = month + '月';
+                if (month === selectedMonth) {
+                    option.selected = true;
+                }
+                monthSelector.appendChild(option);
+            }
+            
+            // 事件監聽器 - 排班相關
+            document.getElementById('btnAddEmployee').addEventListener('click', () => showEmployeeModal('add'));
+            document.getElementById('btnGenerateTable').addEventListener('click', generateScheduleTable);
+            document.getElementById('btnSave').addEventListener('click', saveSchedule);
+            document.getElementById('btnLoad').addEventListener('click', loadSchedule);
+            document.getElementById('btnExportExcel').addEventListener('click', exportToExcel);
+            document.getElementById('btnConfirmEmployee').addEventListener('click', saveEmployee);
+            document.getElementById('btnAddEmployeeFromPreferences').addEventListener('click', () => showEmployeeModal('add'));
+            
+            // 關閉模態框的事件
+            document.querySelectorAll('.close').forEach(closeBtn => {
+                closeBtn.addEventListener('click', function() {
+                    document.querySelectorAll('.modal').forEach(modal => {
+                        modal.style.display = 'none';
+                    });
+                });
+            });
+            
+            // 點擊模態框外部關閉
+            window.addEventListener('click', function(event) {
+                document.querySelectorAll('.modal').forEach(modal => {
+                    if (event.target === modal) {
+                        modal.style.display = 'none';
+                    }
+                });
+            });
+            
+            // 標籤切換功能
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // 移除所有標籤的active類
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    // 隱藏所有內容
+                    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                    
+                    // 激活當前標籤
+                    this.classList.add('active');
+                    // 顯示相應內容
+                    const tabName = this.getAttribute('data-tab');
+                    document.getElementById(tabName + 'Tab').classList.add('active');
+                    
+                    // 如果切換到偏好設置標籤，則刷新設置表格
+                    if (tabName === 'preferences') {
+                        renderPreferencesTable();
+                    }
+                });
+            });
+
+            document.getElementById('applyShiftTargets').addEventListener('click', function() {
+                // 保存當前狀態到歷史記錄
+                saveToHistory();
+                
+                // 獲取設置的值
+                const dTarget = parseInt(document.getElementById('d-shift-target').value) || defaultShiftTargets.D;
+                const eTarget = parseInt(document.getElementById('e-shift-target').value) || defaultShiftTargets.E;
+                const nTarget = parseInt(document.getElementById('n-shift-target').value) || defaultShiftTargets.N;
+                
+                // 獲取當前月份的天數
+                const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+                
+                // 應用到所有日期
+                for (let day = 1; day <= daysInMonth; day++) {
+                    // 更新shiftTargets對象
+                    shiftTargets.D[day] = dTarget;
+                    shiftTargets.E[day] = eTarget;
+                    shiftTargets.N[day] = nTarget;
+                    
+                    // 直接更新UI顯示
+                    const dInput = document.getElementById(`D-count-day-${day}`);
+                    const eInput = document.getElementById(`E-count-day-${day}`);
+                    const nInput = document.getElementById(`N-count-day-${day}`);
+                    
+                    if (dInput && eInput && nInput) {
+                        // 顯示目標值而非實際計數
+                        dInput.value = dTarget;
+                        eInput.value = eTarget;
+                        nInput.value = nTarget;
+                    }
+                }
+                
+                // 顯示成功通知
+                showNotification('班別人數目標設置已應用', 'success');
+                
+                // 更新各班別與目標的比較狀態
+                updateDailyShiftStatus();
+            });
+            
+            // 顯示員工模態框（新增或編輯）
+            function showEmployeeModal(mode, index = -1) {
+                const modal = document.getElementById('employeeModal');
+                const title = document.getElementById('employeeModalTitle');
+                
+                // 重置表單
+                document.getElementById('employeeName').value = '';
+                document.getElementById('employeePosition').value = '';
+                document.getElementById('preferD').checked = false;
+                document.getElementById('preferE').checked = false;
+                document.getElementById('preferN').checked = false;
+                document.getElementById('isLeader').checked = false;
+                document.getElementById('hasLongVacation').checked = false;
+                document.getElementById('isPartTime').checked = false;
+                document.getElementById('lastMonthShift').value = '';
+                document.getElementById('lastMonthWorkDays').value = 0;
+                
+                if (mode === 'edit' && index >= 0) {
+                    // 編輯模式 - 填充現有數據
+                    const employee = employees[index];
+                    title.textContent = '編輯護理師';
+                    document.getElementById('employeeName').value = employee.name;
+                    document.getElementById('employeePosition').value = employee.position || '';
+                    
+                    // 設置偏好班別
+                    if (employee.preferences) {
+                        document.getElementById('preferD').checked = employee.preferences.includes('D');
+                        document.getElementById('preferE').checked = employee.preferences.includes('E');
+                        document.getElementById('preferN').checked = employee.preferences.includes('N');
+                    }
+                    
+                    // 設置其他選項
+                    document.getElementById('isLeader').checked = employee.isLeader || false;
+                    document.getElementById('hasLongVacation').checked = employee.hasLongVacation || false;
+                    document.getElementById('isPartTime').checked = employee.isPartTime || false;
+                    document.getElementById('lastMonthShift').value = employee.lastMonthShift || '';
+                    document.getElementById('lastMonthWorkDays').value = employee.lastMonthWorkDays || 0;
+                    
+                    editingEmployeeIndex = index;
+                } else {
+                    // 新增模式
+                    title.textContent = '新增護理師';
+                    editingEmployeeIndex = -1;
+                }
+                
+                // 顯示對話框
+                modal.style.display = 'block';
+                document.getElementById('employeeName').focus();
+            }
+            // 綁定關閉模態框的事件
+            // 獲取模態框元素
+            const modal = document.getElementById('employeeModal');
+            const closeBtn = document.querySelector('.employee-modal-close');
+            
+            // 點擊 X 關閉模態框
+            closeBtn.addEventListener('click', function() {
+                modal.style.display = 'none';
+            });
+            
+            // 點擊模態框外部關閉
+            window.addEventListener('click', function(event) {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+
+            // 從排班表中編輯員工（此功能已廢棄，改為在設置頁面直接編輯）
+            function showEditEmployeeModal() {
+                const selectedEmployees = [];
+                document.querySelectorAll('input[name="selectEmployee"]:checked').forEach(checkbox => {
+                    selectedEmployees.push(checkbox.value);
+                });
+                
+                if (selectedEmployees.length !== 1) {
+                    showNotification('請選擇一名護理師進行編輯', 'error');
+                    return;
+                }
+                
+                const employeeIndex = employees.findIndex(emp => emp.name === selectedEmployees[0]);
+                if (employeeIndex !== -1) {
+                    showEmployeeModal('edit', employeeIndex);
+                }
+            }
+            
+            // 保存員工信息（新增或編輯）
+            function saveEmployee() {
+                const name = document.getElementById('employeeName').value.trim();
+                const position = document.getElementById('employeePosition').value.trim();
+                
+                if (name === '') {
+                    showNotification('請輸入護理師姓名', 'error');
+                    return;
+                }
+                
+                // 檢查是否有重名（除非是編輯同一人）
+                if (editingEmployeeIndex === -1 && employees.some(emp => emp.name === name)) {
+                    showNotification('護理師姓名已存在', 'error');
+                    return;
+                }
+                
+                // 收集偏好班別 - 只保留一個選項
+                let preferences = [];
+                if (document.getElementById('preferD').checked) preferences.push('D');
+                if (document.getElementById('preferE').checked && preferences.length === 0) preferences.push('E');
+                if (document.getElementById('preferN').checked && preferences.length === 0) preferences.push('N');
+                
+                // 創建或更新員工對象
+                const employeeData = {
+                    name: name,
+                    position: position,
+                    preferences: preferences,
+                    isLeader: document.getElementById('isLeader').checked,
+                    hasLongVacation: document.getElementById('hasLongVacation').checked,
+                    isPartTime: document.getElementById('isPartTime').checked,
+                    lastMonthShift: document.getElementById('lastMonthShift').value,
+                    lastMonthWorkDays: parseInt(document.getElementById('lastMonthWorkDays').value)
+                };
+                
+                if (editingEmployeeIndex !== -1) {
+                    // 更新現有員工
+                    employees[editingEmployeeIndex] = employeeData;
+                    showNotification('護理師資料已更新', 'success');
+                } else {
+                    // 新增員工
+                    employees.push(employeeData);
+                    showNotification('護理師新增成功', 'success');
+                }
+                
+                document.getElementById('employeeModal').style.display = 'none';
+                generateScheduleTable();
+                renderPreferencesTable();
+            }
+            // 刪除護理師
+            function removeEmployee() {
+                if (employees.length === 0) {
+                    showNotification('沒有護理師可以刪除', 'error');
+                    return;
+                }
+                
+                const selectedEmployees = [];
+                document.querySelectorAll('input[name="selectEmployee"]:checked').forEach(checkbox => {
+                    selectedEmployees.push(checkbox.value);
+                });
+                
+                if (selectedEmployees.length === 0) {
+                    showNotification('請選擇要刪除的護理師', 'error');
+                    return;
+                }
+                
+                employees = employees.filter(emp => !selectedEmployees.includes(emp.name));
+                generateScheduleTable();
+                renderPreferencesTable();
+                showNotification('護理師刪除成功', 'success');
+            }
+            
+            // 渲染偏好設置表格
+            function renderPreferencesTable() {
+                const tbody = document.getElementById('preferencesTableBody');
+                tbody.innerHTML = '';
+                
+                employees.forEach((employee, index) => {
+                    const tr = document.createElement('tr');
+                    
+                    // 護理師姓名 - 不再添加移動按鈕
+                    const nameTd = document.createElement('td');
+
+                    // 護理師名稱容器
+                    const nameContainer = document.createElement('div');
+                    nameContainer.className = 'pref-name-container';
+                    nameContainer.innerHTML = renderEmployeeName(employee);
+
+                    // 只添加名稱容器到單元格
+                    nameTd.appendChild(nameContainer);
+                    
+                    tr.appendChild(nameTd);
+                    
+                    
+                    
+                    // 偏好班別 - 改為顯示單一偏好
+                    const preferencesTd = document.createElement('td');
+                    preferencesTd.textContent = employee.preferences && employee.preferences.length > 0 
+                        ? employee.preferences[0] 
+                        : '-';
+                    tr.appendChild(preferencesTd);
+                    
+                    // Leader
+                    const leaderTd = document.createElement('td');
+                    leaderTd.textContent = employee.isLeader ? 'TRUE' : 'FALSE';
+                    tr.appendChild(leaderTd);
+                    
+                    // 長假
+                    const vacationTd = document.createElement('td');
+                    vacationTd.textContent = employee.hasLongVacation ? 'TRUE' : 'FALSE';
+                    tr.appendChild(vacationTd);
+                    
+                    // 半職
+                    const partTimeTd = document.createElement('td');
+                    partTimeTd.textContent = employee.isPartTime ? 'TRUE' : 'FALSE';
+                    tr.appendChild(partTimeTd);
+                    
+                    // 上個月最後一天班別
+                    const lastShiftTd = document.createElement('td');
+                    lastShiftTd.textContent = employee.lastMonthShift || '-';
+                    tr.appendChild(lastShiftTd);
+                    
+                    // 上個月月底上班天數 - 添加顏色警示
+                    const lastWorkDaysTd = document.createElement('td');
+                    lastWorkDaysTd.textContent = employee.lastMonthWorkDays || 0;
+                    
+                    // 根據連續上班天數設置顏色警告
+                    if (employee.lastMonthWorkDays >= 8) {
+                        lastWorkDaysTd.style.backgroundColor = '#FFAB91';
+                        lastWorkDaysTd.style.color = '#D32F2F';
+                        lastWorkDaysTd.style.fontWeight = 'bold';
+                    } else if (employee.lastMonthWorkDays >= 6) {
+                        lastWorkDaysTd.style.backgroundColor = '#FFCC80';
+                    } else if (employee.lastMonthWorkDays >= 4) {
+                        lastWorkDaysTd.style.backgroundColor = '#FFF9C4';
+                    }
+                    
+                    tr.appendChild(lastWorkDaysTd);
+                    
+                    // 操作按鈕
+                    const actionTd = document.createElement('td');
+                    actionTd.style.whiteSpace = 'nowrap';
+                    
+                    // 編輯按鈕
+                    const editBtn = document.createElement('button');
+                    editBtn.textContent = '編輯';
+                    editBtn.className = 'secondary';
+                    editBtn.style.marginRight = '5px';
+                    editBtn.style.padding = '5px 10px';
+                    editBtn.addEventListener('click', () => showEmployeeModal('edit', index));
+                    
+                    // 刪除按鈕
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.textContent = '刪除';
+                    deleteBtn.className = 'danger';
+                    deleteBtn.style.padding = '5px 10px';
+                    deleteBtn.addEventListener('click', () => {
+                        if (confirm(`確定要刪除護理師 ${employee.name} 嗎？`)) {
+                            employees.splice(index, 1);
+                            renderPreferencesTable();
+                            generateScheduleTable();
+                            showNotification('護理師已刪除', 'success');
+                        }
+                    });
+                    
+                    actionTd.appendChild(editBtn);
+                    actionTd.appendChild(deleteBtn);
+                    tr.appendChild(actionTd);
+                    
+                    tbody.appendChild(tr);
+                });
+                // 添加拖曳功能
+                addDragDropToPreferencesRows();
+                hideExistingMoveButtons();
+                optimizeTableHeight();
+            }
+
+            function renderEmployeeName(employee) {
+                // 创建单行布局
+                let nameDisplay = '<span class="drag-handle"></span>';
+                
+                // 添加护理师姓名，使用span标签包裹以便于样式控制
+                nameDisplay += '<span class="nurse-name">' + employee.name;
+                
+                // 添加职位标记
+                if (employee.position) {
+                    nameDisplay += `(${employee.position})`;
+                }
+                nameDisplay += '</span>';
+                
+                // 如果上月底连续上班天数超过6天，添加警告标记
+                if (employee.lastMonthWorkDays >= 8) {
+                    nameDisplay += ` <span style="color: #D32F2F; font-weight: bold; font-size: 12px;" title="上个月底已连续上班${employee.lastMonthWorkDays}天">⚠️${employee.lastMonthWorkDays}</span>`;
+                } else if (employee.lastMonthWorkDays >= 6) {
+                    nameDisplay += ` <span style="color: #F57C00; font-weight: bold; font-size: 12px;" title="上个月底已连续上班${employee.lastMonthWorkDays}天">⚠️${employee.lastMonthWorkDays}</span>`;
+                }
+                
+                return nameDisplay;
+            }
+
+            function updateEmployeeNameCellStyle() {
+                employees.forEach(employee => {
+                    // 獲取該護理師在表格中的所有姓名單元格
+                    const nameCells = document.querySelectorAll(`td.employee-name:has(+ td + td + td + td select.preference-select option[value="${employee.preferences?.[0]}"][selected])`);
+                    
+                    // 如果沒有使用:has選擇器的瀏覽器支持，可以改用這種方式
+                    document.querySelectorAll('tr').forEach(row => {
+                        const nameCell = row.querySelector('td.employee-name');
+                        const prefSelect = row.querySelector('select.preference-select');
+                        
+                        if (nameCell && prefSelect && employee.name === nameCell.textContent.split('(')[0].trim()) {
+                            // 移除所有可能的班別背景色
+                            nameCell.classList.remove('pref-E-bg', 'pref-D-bg', 'pref-N-bg');
+                            
+                            // 根據護理師偏好設置背景色
+                            if (employee.preferences && employee.preferences.length > 0) {
+                                const preference = employee.preferences[0];
+                                if (preference === 'E') {
+                                    nameCell.classList.add('pref-E-bg');
+                                } else if (preference === 'D') {
+                                    nameCell.classList.add('pref-D-bg');
+                                } else if (preference === 'N') {
+                                    nameCell.classList.add('pref-N-bg');
+                                }
+                            }
+                        }
+                    });
+                });
+            }
+
+            // 优化表格高度和样式
+            function optimizeTableHeight() {
+                // 获取所有表格行
+                const rows = document.querySelectorAll('#scheduleTable tr');
+                
+                // 设置合适的行高
+                rows.forEach(row => {
+                    // 基本行高设置
+                    row.style.height = 'auto';
+                    row.style.minHeight = '30px';
+                    
+                    // 获取所有单元格，调整垂直对齐方式
+                    const cells = row.querySelectorAll('td, th');
+                    cells.forEach(cell => {
+                        cell.style.verticalAlign = 'middle';
+                        cell.style.padding = '3px';
+                    });
+                });
+                
+                // 获取所有名称容器，确保水平布局
+                const nameContainers = document.querySelectorAll('.name-container, .pref-name-container');
+                nameContainers.forEach(container => {
+                    container.style.display = 'flex';
+                    container.style.flexDirection = 'row';
+                    container.style.alignItems = 'center';
+                    container.style.height = '24px';
+                });
+            }
+
+            function prefSelectChangeHandler(event) {
+                const select = event.target;
+                const selectedValue = select.value;
+                const row = select.closest('tr');
+                const employeeNameCell = row.querySelector('.employee-name');
+                const employeeName = employeeNameCell.textContent.split('(')[0].trim();
+                
+                // 查找對應的員工並更新偏好
+                const employee = employees.find(emp => emp.name === employeeName);
+                if (employee) {
+                    employee.preferences = selectedValue ? [selectedValue] : [];
+                    
+                    // 更新姓名單元格的背景色
+                    employeeNameCell.classList.remove('pref-E-bg', 'pref-D-bg', 'pref-N-bg');
+                    if (selectedValue === 'E') {
+                        employeeNameCell.classList.add('pref-E-bg');
+                    } else if (selectedValue === 'D') {
+                        employeeNameCell.classList.add('pref-D-bg');
+                    } else if (selectedValue === 'N') {
+                        employeeNameCell.classList.add('pref-N-bg');
+                    }
+                }
+            }
+            function bindPreferenceChangeHandlers() {
+                document.querySelectorAll('.preference-select').forEach(select => {
+                    // 移除現有處理器以避免重複
+                    select.removeEventListener('change', prefSelectChangeHandler);
+                    // 添加新的處理器
+                    select.addEventListener('change', prefSelectChangeHandler);
+                });
+            }
+
+            function enhanceTableAfterGeneration() {
+                bindPreferenceChangeHandlers();
+                updateEmployeeNameCellStyle();
+                updateShiftSummaryRowStyles();
+            }
+
+            function enhanceTableScrolling() {
+                // Get the table container
+                const tableContainer = document.getElementById('scheduleTableContainer');
+                
+                // Add explicit scrolling settings
+                if (tableContainer) {
+                    tableContainer.style.overflow = 'auto';
+                    tableContainer.style.position = 'relative';
+                    tableContainer.style.width = '100%';
+                    
+                    // Make sure horizontal scrolling works properly
+                    const scrollWidth = tableContainer.scrollWidth;
+                    const clientWidth = tableContainer.clientWidth;
+                    
+                    // Only add horizontal scrollbar if needed
+                    if (scrollWidth > clientWidth) {
+                        tableContainer.style.overflowX = 'scroll';
+                    }
+                }
+                
+                // Make sure the schedule table has proper layout
+                const scheduleTable = document.getElementById('scheduleTable');
+                if (scheduleTable) {
+                    scheduleTable.style.borderCollapse = 'separate';
+                    scheduleTable.style.borderSpacing = '0';
+                    scheduleTable.style.tableLayout = 'fixed';
+                }
+                
+                // Fix header first cell
+                const headerFirstCell = document.querySelector('#headerRow th:first-child');
+                if (headerFirstCell) {
+                    headerFirstCell.style.position = 'sticky';
+                    headerFirstCell.style.left = '0';
+                    headerFirstCell.style.zIndex = '30';
+                    headerFirstCell.style.backgroundColor = '#f2f2f2';
+                    headerFirstCell.style.boxShadow = '2px 0 5px rgba(0,0,0,0.1)';
+                }
+                
+                // Fix all nurse name cells
+                document.querySelectorAll('.employee-name').forEach(cell => {
+                    cell.style.position = 'sticky';
+                    cell.style.left = '0';
+                    cell.style.zIndex = '20';
+                    cell.style.backgroundColor = '#FFEBB5';
+                    cell.style.boxShadow = '2px 0 5px rgba(0,0,0,0.1)';
+                });
+                
+                // Fix summary row first cells
+                document.querySelectorAll('.summary-row td:first-child').forEach(cell => {
+                    cell.style.position = 'sticky';
+                    cell.style.left = '0';
+                    cell.style.zIndex = '20';
+                    
+                    // Keep the correct background color based on summary row type
+                    const row = cell.closest('tr');
+                    if (row.classList.contains('summary-D-row')) {
+                        cell.style.backgroundColor = '#FFE0B2';
+                    } else if (row.classList.contains('summary-E-row')) {
+                        cell.style.backgroundColor = '#BBDEFB';
+                    } else if (row.classList.contains('summary-N-row')) {
+                        cell.style.backgroundColor = '#E1BEE7';
+                    }
+                });
+            }
+            // 添加窗口调整大小时重新应用固定列功能
+            window.addEventListener('resize', function() {
+                enhanceTableScrolling();
+            });
+
+            // 產生排班表
+            function generateScheduleTable() {
+                selectedYear = parseInt(yearSelector.value);
+                selectedMonth = parseInt(monthSelector.value);
+                
+                // 計算選定月份的天數
+                const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+                
+                // 計算上個月的最後一天日期
+                const lastMonth = selectedMonth === 1 ? 12 : selectedMonth - 1;
+                const lastMonthYear = selectedMonth === 1 ? selectedYear - 1 : selectedYear;
+                const lastDayOfLastMonth = new Date(lastMonthYear, lastMonth, 0).getDate();
+                
+                // 清除現有表格
+                const headerRow = document.getElementById('headerRow');
+                headerRow.innerHTML = '<th>護理師 / 日期</th>';
+                
+                const leaderTh = document.createElement('th');
+                leaderTh.textContent = 'Leader';
+                leaderTh.className = 'option-header';
+                headerRow.appendChild(leaderTh);
+                
+                const vacationTh = document.createElement('th');
+                vacationTh.textContent = '長假';
+                vacationTh.className = 'option-header';
+                headerRow.appendChild(vacationTh);
+                
+                const partTimeTh = document.createElement('th');
+                partTimeTh.textContent = '半職';
+                partTimeTh.className = 'option-header';
+                headerRow.appendChild(partTimeTh);
+                
+                const prefTh = document.createElement('th');
+                prefTh.textContent = '偏好';
+                prefTh.className = 'option-header';
+                headerRow.appendChild(prefTh);
+                
+                // 添加上個月連續上班天數欄位
+                const lastMonthWorkDaysTh = document.createElement('th');
+                lastMonthWorkDaysTh.textContent = '連續上班';
+                lastMonthWorkDaysTh.className = 'option-header last-month-work-days';
+                lastMonthWorkDaysTh.title = '上月底連續上班天數';
+                headerRow.appendChild(lastMonthWorkDaysTh);
+                
+                // 添加上個月最後一天標題
+                const lastMonthDayTh = document.createElement('th');
+                lastMonthDayTh.textContent = `${lastMonth}/${lastDayOfLastMonth}`;
+                lastMonthDayTh.className = 'date-header last-month-day';
+                lastMonthDayTh.style.backgroundColor = '#FFFDE7'; // 淺黃色背景標示上月日期
+                lastMonthDayTh.style.borderLeft = '2px solid #FFA000'; // 橙色左邊框明顯區分
+                lastMonthDayTh.title = '上個月最後一天';
+                headerRow.appendChild(lastMonthDayTh);
+            
+                // 生成日期標題
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const th = document.createElement('th');
+                    th.textContent = day;
+                    th.className = 'date-header';
+                    
+                    // 檢查是否為週末
+                    const currentDate = new Date(selectedYear, selectedMonth - 1, day);
+                    const dayOfWeek = currentDate.getDay(); // 0是星期日，6是星期六
+                    
+                    if (dayOfWeek === 0) { // 星期日
+                        th.classList.add('weekend-header');
+                        th.classList.add('sunday-header');
+                    } else if (dayOfWeek === 6) { // 星期六
+                        th.classList.add('weekend-header');
+                    }
+                    
+                    // 檢查是否為台灣法定假日
+                    if (isTaiwanHoliday(selectedYear, selectedMonth, day)) {
+                        th.classList.add('holiday-header');
+                        
+                        // 添加假日指示器 (紅色標記)
+                        const holidayMark = document.createElement('div');
+                        holidayMark.textContent = '假';
+                        holidayMark.style.fontSize = '10px';
+                        holidayMark.style.position = 'absolute';
+                        holidayMark.style.right = '2px';
+                        holidayMark.style.top = '2px';
+                        holidayMark.style.color = 'red';
+                        
+                        th.style.position = 'relative';
+                        th.appendChild(holidayMark);
+                    }
+                    
+                    headerRow.appendChild(th);
+                }
+                
+                // 添加統計列
+                const th = document.createElement('th');
+                th.textContent = '休假數';
+                headerRow.appendChild(th);
+                
+                const th2 = document.createElement('th');
+                th2.textContent = '工作天數';
+                headerRow.appendChild(th2);
+                
+                // 生成護理師行
+                const tableBody = document.getElementById('tableBody');
+                tableBody.innerHTML = '';
+                
+                // 護理師排班行
+                employees.forEach((employee, empIndex) => {
+                    const tr = document.createElement('tr');
+                    
+
+                    // 護理師名稱單元格 - 不再添加移動按鈕
+                    const nameTd = document.createElement('td');
+                    nameTd.className = 'employee-name';
+
+                    // 直接創建護理師名稱和資訊容器
+                    const nameContainer = document.createElement('div');
+                    nameContainer.className = 'name-container';
+                    nameContainer.innerHTML = renderEmployeeName(employee);
+
+                    // 只添加名稱容器到單元格
+                    nameTd.appendChild(nameContainer);
+                    
+                    // 添加班別特有背景色
+                    if (employee.preferences && employee.preferences.length > 0) {
+                        const preference = employee.preferences[0];
+                        if (preference === 'E') {
+                            nameContainer.classList.add('pref-E-bg');
+                        } else if (preference === 'D') {
+                            nameContainer.classList.add('pref-D-bg');
+                        } else if (preference === 'N') {
+                            nameContainer.classList.add('pref-N-bg');
+                        }
+                    }
+                    
+                    // 將按鈕容器和名稱容器添加到單元格
+                    nameTd.appendChild(nameContainer);
+                    
+                    tr.appendChild(nameTd);
+                    
+                    // Leader選項單元格
+                    const leaderTd = document.createElement('td');
+                    leaderTd.className = 'option-cell text-center';
+                    
+                    const leaderCheckbox = document.createElement('input');
+                    leaderCheckbox.type = 'checkbox';
+                    leaderCheckbox.checked = employee.isLeader || false;
+                    leaderCheckbox.addEventListener('change', function() {
+                        employee.isLeader = this.checked;
+                        // 更新position
+                        if (this.checked && !employee.position) {
+                            employee.position = 'L';
+                        } else if (!this.checked && employee.position === 'L') {
+                            employee.position = '';
+                        }
+                    });
+                    
+                    leaderTd.appendChild(leaderCheckbox);
+                    tr.appendChild(leaderTd);
+                    
+                    // 長假選項單元格
+                    const vacationTd = document.createElement('td');
+                    vacationTd.className = 'option-cell text-center';
+                    
+                    const vacationCheckbox = document.createElement('input');
+                    vacationCheckbox.type = 'checkbox';
+                    vacationCheckbox.checked = employee.hasLongVacation || false;
+                    vacationCheckbox.addEventListener('change', function() {
+                        employee.hasLongVacation = this.checked;
+                    });
+                    
+                    vacationTd.appendChild(vacationCheckbox);
+                    tr.appendChild(vacationTd);
+                    
+                    // 半職選項單元格
+                    const partTimeTd = document.createElement('td');
+                    partTimeTd.className = 'option-cell text-center';
+                    
+                    const partTimeCheckbox = document.createElement('input');
+                    partTimeCheckbox.type = 'checkbox';
+                    partTimeCheckbox.checked = employee.isPartTime || false;
+                    partTimeCheckbox.addEventListener('change', function() {
+                        employee.isPartTime = this.checked;
+                    });
+                    
+                    partTimeTd.appendChild(partTimeCheckbox);
+                    tr.appendChild(partTimeTd);
+                    
+                    // 偏好班別下拉選單單元格
+                    const prefTd = document.createElement('td');
+                    prefTd.className = 'option-cell';
+                    
+                    const prefSelect = document.createElement('select');
+                    prefSelect.className = 'preference-select';
+                    prefSelect.style.width = '100%';
+                    prefSelect.style.padding = '2px';
+                    
+                    // 添加空選項
+                    const emptyOption = document.createElement('option');
+                    emptyOption.value = '';
+                    emptyOption.textContent = '- 選擇 -';
+                    prefSelect.appendChild(emptyOption);
+                    
+                    // 添加班別選項
+                    const shiftOptions = ['D', 'E', 'N'];
+                    shiftOptions.forEach(shift => {
+                        const option = document.createElement('option');
+                        option.value = shift;
+                        option.textContent = shift;
+                        
+                        // 根據護理師偏好設置選中項
+                        if (employee.preferences && employee.preferences.length > 0 && employee.preferences[0] === shift) {
+                            option.selected = true;
+                        }
+                        
+                        prefSelect.appendChild(option);
+                    });
+                    
+                    // 監聽變更事件
+                    prefSelect.addEventListener('change', function() {
+                        const selectedValue = this.value;
+                        // 設置護理師偏好（只保留選中的一個值）
+                        employee.preferences = selectedValue ? [selectedValue] : [];
+                    });
+                    
+                    prefTd.appendChild(prefSelect);
+                    tr.appendChild(prefTd);
+                    
+                    // 添加上個月連續工作天數輸入框
+                    const lastMonthWorkDaysTd = document.createElement('td');
+                    lastMonthWorkDaysTd.className = 'option-cell last-month-work-days-cell';
+                    
+                    const lastMonthWorkDaysInput = document.createElement('input');
+                    lastMonthWorkDaysInput.type = 'number';
+                    lastMonthWorkDaysInput.min = 0;
+                    lastMonthWorkDaysInput.max = 10;
+                    lastMonthWorkDaysInput.value = employee.lastMonthWorkDays || 0;
+                    lastMonthWorkDaysInput.className = 'form-control last-month-work-days-input';
+                    lastMonthWorkDaysInput.style.width = '100%';
+                    lastMonthWorkDaysInput.style.textAlign = 'center';
+                    lastMonthWorkDaysInput.style.padding = '4px';
+                    lastMonthWorkDaysInput.title = '上月底連續上班天數';
+                    
+                    lastMonthWorkDaysInput.addEventListener('change', function() {
+                        employee.lastMonthWorkDays = parseInt(this.value) || 0;
+                        // 避免非法值
+                        if (employee.lastMonthWorkDays < 0) employee.lastMonthWorkDays = 0;
+                        if (employee.lastMonthWorkDays > 10) employee.lastMonthWorkDays = 10;
+                        this.value = employee.lastMonthWorkDays;
+                    });
+                    
+                    lastMonthWorkDaysTd.appendChild(lastMonthWorkDaysInput);
+                    tr.appendChild(lastMonthWorkDaysTd);
+                    
+                    // 添加上個月最後一天班別下拉選單
+                    const lastMonthDayTd = document.createElement('td');
+                    lastMonthDayTd.className = 'last-month-day-cell';
+                    lastMonthDayTd.style.backgroundColor = '#FFFDE7'; // 淺黃色背景
+                    lastMonthDayTd.style.borderLeft = '2px solid #FFA000'; // 橙色邊框
+                    
+                    const lastMonthShiftInput = document.createElement('input');
+                    lastMonthShiftInput.type = 'text';
+                    lastMonthShiftInput.className = 'shift-input last-month-shift-input';
+                    lastMonthShiftInput.value = employee.lastMonthShift || '';
+                    lastMonthShiftInput.maxLength = 3;
+                    lastMonthShiftInput.style.backgroundColor = '#FFFDE7';
+                    
+                    // 設置樣式
+                    const lastMonthShift = employee.lastMonthShift || '';
+                    if (lastMonthShift === 'D') {
+                        lastMonthDayTd.classList.add('cell-D');
+                    } else if (lastMonthShift === 'E') {
+                        lastMonthDayTd.classList.add('cell-E');
+                    } else if (lastMonthShift === 'N') {
+                        lastMonthDayTd.classList.add('cell-N');
+                    } else if (lastMonthShift === 'OFF') {
+                        lastMonthDayTd.classList.add('cell-OFF');
+                        lastMonthShiftInput.style.color = 'red';
+                    } else if (lastMonthShift === 'P') {
+                        lastMonthDayTd.classList.add('cell-P');
+                        lastMonthShiftInput.style.color = 'red';
+                    }
+                    
+                    // 添加輸入事件處理
+                    lastMonthShiftInput.addEventListener('input', function() {
+                        validateLastMonthShiftInput(this, employee);
+                    });
+                    
+                    // 添加keyup事件
+                    lastMonthShiftInput.addEventListener('keyup', function(event) {
+                        const validKeys = ['0', '1', '2', '3', '4', '5', 'd', 'e', 'n', 'o', 'p', 'D', 'E', 'N', 'O', 'P'];
+                        if (validKeys.includes(event.key)) {
+                            this.value = event.key;
+                            validateLastMonthShiftInput(this, employee);
+                        }
+                    });
+                    
+                    lastMonthDayTd.appendChild(lastMonthShiftInput);
+                    tr.appendChild(lastMonthDayTd);
+                    
+                    // 為每一天生成下拉選單 - 不預設班別
+                    for (let day = 1; day <= daysInMonth; day++) {
+                        const td = document.createElement('td');
+                        
+                        const dateKey = `${selectedYear}-${selectedMonth}-${day}`;
+                        const employeeKey = employee.name;
+                        
+                        // 檢查是否為週末或法定假日
+                        const currentDate = new Date(selectedYear, selectedMonth - 1, day);
+                        const dayOfWeek = currentDate.getDay();
+                        if (dayOfWeek === 0 || dayOfWeek === 6) {
+                            td.classList.add('weekend-cell');
+                        }
+                        
+                        // 檢查是否為台灣法定假日
+                        if (isTaiwanHoliday(selectedYear, selectedMonth, day)) {
+                            td.classList.add('holiday-cell');
+                        }
+                        
+                        // 使用input而不是select
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.className = 'shift-input';
+                        input.dataset.date = dateKey;
+                        input.dataset.employee = employeeKey;
+                        input.dataset.day = day;
+                        input.maxLength = 3; // 允許最多3個字元（對於"OFF"）
+                        
+                        // 設置已保存的值（如果有）
+                        if (scheduleData[dateKey] && scheduleData[dateKey][employeeKey]) {
+                            input.value = scheduleData[dateKey][employeeKey];
+                        }
+                        
+                        // 添加多種事件以確保輸入被正確處理
+                        input.addEventListener('input', function(event) {
+                            validateShiftInput(this);
+                        });
+                        
+                        // 添加keyup事件以立即響應鍵盤輸入
+                        input.addEventListener('keyup', function(event) {
+                            // 如果是數字或字母鍵，立即進行轉換
+                            if (/^[0-9a-zA-Z]$/.test(event.key)) {
+                                validateShiftInput(this);
+                            }
+                        });
+                        
+                        // 添加失去焦點事件確保值被驗證
+                        input.addEventListener('blur', function() {
+                            validateShiftInput(this);
+                        });
+                        
+                        // 添加鍵盤導航事件
+                        input.addEventListener('keydown', function(event) {
+                            handleKeyNavigation(event, this);
+                        });
+                        
+                        td.appendChild(input);
+                        tr.appendChild(td);
+                    }
+            
+                    // 添加休假天數統計
+                    const offDaysTd = document.createElement('td');
+                    offDaysTd.className = 'off-days-count';
+                    offDaysTd.style.textAlign = 'center';
+                    tr.appendChild(offDaysTd);
+                    
+                    // 添加工作天數統計
+                    const workDaysTd = document.createElement('td');
+                    workDaysTd.className = 'work-days-count';
+                    workDaysTd.style.textAlign = 'center';
+                    tr.appendChild(workDaysTd);
+                    
+                    tableBody.appendChild(tr);
+                });
+            
+                // 添加每日班次統計行
+                const dailyStats = [
+                    {id: 'D-count', label: 'D班', defaultValue: 8, class: 'summary-D-row'},
+                    {id: 'E-count', label: 'E班', defaultValue: 5, class: 'summary-E-row'},
+                    {id: 'N-count', label: 'N班', defaultValue: 3, class: 'summary-N-row'}
+                ];
+                
+                // 計算每日班次需求
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const currentDate = new Date(selectedYear, selectedMonth - 1, day);
+                    const dayOfWeek = currentDate.getDay(); // 0是星期日，6是星期六
+                    // 如果是週末，調整默認值
+                    if (dayOfWeek === 0 || dayOfWeek === 6) {
+                        dailyStats[0].defaultValue = 5; // 週末D班減少
+                        dailyStats[1].defaultValue = 3; // 週末E班減少
+                        dailyStats[2].defaultValue = 2; // 週末N班減少
+                    } else {
+                        dailyStats[0].defaultValue = 8;
+                        dailyStats[1].defaultValue = 5;
+                        dailyStats[2].defaultValue = 3;
+                    }
+                }
+            
+                dailyStats.forEach(stat => {
+                    const tr = document.createElement('tr');
+                    tr.className = `summary-row ${stat.class}`; // 添加班別特定的類名
+            
+                    // 標籤單元格
+                    const labelTd = document.createElement('td');
+                    labelTd.textContent = stat.label;
+                    labelTd.className = 'employee-name';
+                    tr.appendChild(labelTd);
+
+                    // 根據班別設置行樣式類
+                    if (stat.label === 'D班') {
+                        tr.classList.add('summary-D-row');
+                    } else if (stat.label === 'E班') {
+                        tr.classList.add('summary-E-row');
+                    } else if (stat.label === 'N班') {
+                        tr.classList.add('summary-N-row');
+                    }
+            
+                    // 為Leader、長假、半職和偏好添加空白單元格
+                    const optionCells = 4; // 原有4個選項欄位
+                    for (let i = 0; i < optionCells; i++) {
+                        const emptyTd = document.createElement('td');
+                        emptyTd.className = 'empty-option-cell';
+                        tr.appendChild(emptyTd);
+                    }
+                    
+                    // 為上月連續上班天數和上月最後一天添加空白單元格
+                    const extraEmptyTd1 = document.createElement('td');
+                    extraEmptyTd1.className = 'empty-option-cell';
+                    tr.appendChild(extraEmptyTd1);
+                    
+                    const extraEmptyTd2 = document.createElement('td');
+                    extraEmptyTd2.className = 'empty-option-cell';
+                    tr.appendChild(extraEmptyTd2);
+            
+                    // 每天的統計數據
+                    for (let day = 1; day <= daysInMonth; day++) {
+                        const td = document.createElement('td');
+                        
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.className = 'direct-input';
+                        input.value = stat.defaultValue;
+                        input.id = `${stat.id}-day-${day}`;
+                        input.style.width = '100%';
+                        input.style.textAlign = 'center';
+                        
+                        td.appendChild(input);
+                        td.className = 'summary-row';
+                        tr.appendChild(td);
+                    }
+            
+                    // 添加空白單元格（對應休假數和工作天數）
+                    const emptyTd1 = document.createElement('td');
+                    tr.appendChild(emptyTd1);
+            
+                    const emptyTd2 = document.createElement('td');
+                    tr.appendChild(emptyTd2);
+            
+                    tableBody.appendChild(tr);
+                });
+                
+                // 初始化排班數據
+                initializeScheduleData();
+                // 更新護理師統計
+                updateSummary();
+                // 更新每日班次統計
+                updateDailyShiftCount();
+                // 初始化歷史記錄
+                initHistory();
+                initializeShiftTargets();
+                // 增強輸入事件處理
+                enhanceInputEventHandlers();
+                // 更新護理師姓名背景色
+                updateEmployeeNameCellStyle();
+                // 更新班別統計行的背景色
+                updateShiftSummaryRowStyles();
+                // 添加拖曳功能
+                addDragDropToEmployeeRows();
+                // 隐藏现有移动按钮
+                hideExistingMoveButtons();
+                // 增强表格滚动功能，确保姓名栏固定
+                enhanceTableScrolling();
+                // 优化表格高度
+                optimizeTableHeight();
+                updateShiftTargetUI();
+                updateDailyShiftStatus();
+                setTimeout(updatePDisplayAfterGeneration, 100);
+            }
+
+            function addFontAwesomeCDN() {
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css';
+                link.integrity = 'sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==';
+                link.crossOrigin = 'anonymous';
+                link.referrerPolicy = 'no-referrer';
+                document.head.appendChild(link);
+            }
+            
+            // 調用函數添加FontAwesome
+            addFontAwesomeCDN();
+
+            // Call this function after table generation and when window resizes
+            function setupScrollingWithRetry() {
+                enhanceTableScrolling();
+                
+                // Call again after a short delay to make sure all elements are properly rendered
+                setTimeout(enhanceTableScrolling, 100);
+                setTimeout(enhanceTableScrolling, 500);
+            }
+
+            // Add window resize event listener
+            window.addEventListener('resize', enhanceTableScrolling);
+
+            const originalGenerateScheduleTable = window.generateScheduleTable;
+            if (typeof originalGenerateScheduleTable === 'function') {
+                window.generateScheduleTable = function() {
+                    originalGenerateScheduleTable.apply(this, arguments);
+                    setTimeout(enhanceTableScrolling, 100);
+                };
+            }
+
+            function initializeShiftTargets() {
+                const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+                
+                // 確保shiftTargets的每個班別都是對象
+                shiftTargets = {
+                    D: {},
+                    E: {},
+                    N: {}
+                };
+                
+                // 初始化每一天的目標人數
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const date = new Date(selectedYear, selectedMonth - 1, day);
+                    const dayOfWeek = date.getDay(); // 0是周日，6是周六
+                    
+                    // 根據是否為週末設置不同的默認值
+                    if (dayOfWeek === 0 || dayOfWeek === 6) { // 週末
+                        shiftTargets.D[day] = 5; // 週末D班減少
+                        shiftTargets.E[day] = 3; // 週末E班減少
+                        shiftTargets.N[day] = 2; // 週末N班減少
+                    } else { // 平日
+                        shiftTargets.D[day] = defaultShiftTargets.D;
+                        shiftTargets.E[day] = defaultShiftTargets.E;
+                        shiftTargets.N[day] = defaultShiftTargets.N;
+                    }
+                }
+                
+                // 更新UI
+                updateShiftTargetUI();
+            }
+            
+            // 初始化排班數據
+            function initializeScheduleData() {
+                const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+                
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const dateKey = `${selectedYear}-${selectedMonth}-${day}`;
+                    
+                    if (!scheduleData[dateKey]) {
+                        scheduleData[dateKey] = {};
+                    }
+                }
+                // 更新表格顯示
+                document.querySelectorAll('.shift-dropdown').forEach(select => {
+                    const dateKey = select.dataset.date;
+                    const employeeKey = select.dataset.employee;
+                    
+                    if (scheduleData[dateKey] && scheduleData[dateKey][employeeKey]) {
+                        select.value = scheduleData[dateKey][employeeKey];
+                        updateShiftStyle(select);
+                    }
+                });
+            }
+
+            // 為表格行添加拖曳功能
+            function addDragDropToEmployeeRows() {
+                const tbody = document.getElementById('tableBody');
+                const rows = tbody.querySelectorAll('tr:not(.summary-row)');
+                
+                rows.forEach((row, index) => {
+                    // 設置拖曳屬性
+                    row.setAttribute('draggable', 'true');
+                    row.classList.add('draggable-row');
+                    row.dataset.employeeIndex = index;
+                    
+                    // 拖曳開始事件
+                    row.addEventListener('dragstart', function(e) {
+                        e.dataTransfer.setData('text/plain', index);
+                        this.classList.add('dragging');
+                        
+                        // 為拖曳添加視覺效果
+                        setTimeout(() => {
+                            this.classList.add('dragging-active');
+                        }, 0);
+                    });
+                    
+                    // 拖曳結束事件
+                    row.addEventListener('dragend', function() {
+                        this.classList.remove('dragging', 'dragging-active');
+                    });
+                    
+                    // 拖曳移過其他行時
+                    row.addEventListener('dragover', function(e) {
+                        e.preventDefault(); // 允許放置
+                        
+                        const draggable = document.querySelector('.dragging');
+                        if (draggable && draggable !== this) {
+                            // 判斷放置位置 (上半部分或下半部分)
+                            const rect = this.getBoundingClientRect();
+                            const y = e.clientY;
+                            const threshold = rect.top + rect.height / 2;
+                            
+                            if (y < threshold) {
+                                // 放在目標上方
+                                this.classList.add('drop-before');
+                                this.classList.remove('drop-after');
+                            } else {
+                                // 放在目標下方
+                                this.classList.add('drop-after');
+                                this.classList.remove('drop-before');
+                            }
+                        }
+                    });
+                    
+                    // 離開目標元素
+                    row.addEventListener('dragleave', function() {
+                        this.classList.remove('drop-before', 'drop-after');
+                    });
+                    
+                    // 放置事件
+                    row.addEventListener('drop', function(e) {
+                        e.preventDefault();
+                        const sourceIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                        const targetIndex = parseInt(this.dataset.employeeIndex);
+                        
+                        // 只有當源和目標不同時才執行移動
+                        if (sourceIndex !== targetIndex) {
+                            const rect = this.getBoundingClientRect();
+                            const y = e.clientY;
+                            const threshold = rect.top + rect.height / 2;
+                            
+                            // 根據拖放位置決定最終位置
+                            let newPosition;
+                            if (y < threshold) {
+                                // 放在目標上方
+                                newPosition = targetIndex;
+                                if (sourceIndex < targetIndex) {
+                                    newPosition--;
+                                }
+                            } else {
+                                // 放在目標下方
+                                newPosition = targetIndex;
+                                if (sourceIndex > targetIndex) {
+                                    newPosition++;
+                                }
+                            }
+                            
+                            // 確保位置在有效範圍內
+                            newPosition = Math.max(0, Math.min(newPosition, employees.length - 1));
+                            
+                            // 移動護理師
+                            moveEmployeeByDrag(sourceIndex, newPosition);
+                        }
+                        
+                        // 移除所有拖放樣式
+                        document.querySelectorAll('.drop-before, .drop-after').forEach(el => {
+                            el.classList.remove('drop-before', 'drop-after');
+                        });
+                    });
+                });
+            }
+
+
+
+            // 為偏好設置表格添加拖曳功能
+            function addDragDropToPreferencesRows() {
+                const tbody = document.getElementById('preferencesTableBody');
+                const rows = tbody.querySelectorAll('tr');
+                
+                rows.forEach((row, index) => {
+                    // 設置拖曳屬性
+                    row.setAttribute('draggable', 'true');
+                    row.classList.add('draggable-row');
+                    row.dataset.employeeIndex = index;
+                    
+                    // 設置相同的事件監聽器
+                    row.addEventListener('dragstart', function(e) {
+                        e.dataTransfer.setData('text/plain', index);
+                        this.classList.add('dragging');
+                        setTimeout(() => { this.classList.add('dragging-active'); }, 0);
+                    });
+                    
+                    row.addEventListener('dragend', function() {
+                        this.classList.remove('dragging', 'dragging-active');
+                    });
+                    
+                    row.addEventListener('dragover', function(e) {
+                        e.preventDefault();
+                        const draggable = document.querySelector('.dragging');
+                        if (draggable && draggable !== this) {
+                            const rect = this.getBoundingClientRect();
+                            const y = e.clientY;
+                            const threshold = rect.top + rect.height / 2;
+                            
+                            if (y < threshold) {
+                                this.classList.add('drop-before');
+                                this.classList.remove('drop-after');
+                            } else {
+                                this.classList.add('drop-after');
+                                this.classList.remove('drop-before');
+                            }
+                        }
+                    });
+                    
+                    row.addEventListener('dragleave', function() {
+                        this.classList.remove('drop-before', 'drop-after');
+                    });
+                    
+                    row.addEventListener('drop', function(e) {
+                        e.preventDefault();
+                        const sourceIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                        const targetIndex = parseInt(this.dataset.employeeIndex);
+                        
+                        if (sourceIndex !== targetIndex) {
+                            const rect = this.getBoundingClientRect();
+                            const y = e.clientY;
+                            const threshold = rect.top + rect.height / 2;
+                            
+                            let newPosition;
+                            if (y < threshold) {
+                                newPosition = targetIndex;
+                                if (sourceIndex < targetIndex) {
+                                    newPosition--;
+                                }
+                            } else {
+                                newPosition = targetIndex;
+                                if (sourceIndex > targetIndex) {
+                                    newPosition++;
+                                }
+                            }
+                            
+                            newPosition = Math.max(0, Math.min(newPosition, employees.length - 1));
+                            moveEmployeeByDrag(sourceIndex, newPosition);
+                        }
+                        
+                        document.querySelectorAll('.drop-before, .drop-after').forEach(el => {
+                            el.classList.remove('drop-before', 'drop-after');
+                        });
+                    });
+                });
+            }
+
+            // 通過拖曳移動護理師
+            function moveEmployeeByDrag(fromIndex, toIndex) {
+                // 保存移動前的狀態到歷史記錄
+                if (typeof saveToHistory === 'function') {
+                    saveToHistory();
+                }
+                
+                // 如果是要移動到相同位置，不執行任何操作
+                if (fromIndex === toIndex) return;
+                
+                // 從陣列中移除並在新位置插入
+                const employee = employees.splice(fromIndex, 1)[0];
+                employees.splice(toIndex, 0, employee);
+                
+                // 重新生成排班表
+                generateScheduleTable();
+                
+                // 更新偏好設置表格
+                renderPreferencesTable();
+                
+                // 更新護理師姓名背景色
+                updateEmployeeNameCellStyle();
+                
+                // 更新班別統計行樣式
+                updateShiftSummaryRowStyles();
+                
+                // 更新表格顯示
+                updateScheduleDisplay();
+                
+                // 顯示通知
+                showNotification('護理師順序已調整', 'success');
+            }
+
+            // 添加拖曳相關的CSS樣式
+            function addDragDropStyles() {
+                const style = document.createElement('style');
+                style.textContent = `
+                    /* 拖曳相關樣式 */
+                    .draggable-row {
+                        cursor: grab;
+                    }
+                    
+                    .draggable-row:active {
+                        cursor: grabbing;
+                    }
+                    
+                    .dragging {
+                        opacity: 0.6;
+                        outline: 2px dashed #2196F3;
+                    }
+                    
+                    .dragging-active {
+                        background-color: #f0f0f0;
+                    }
+                    
+                    .drop-before {
+                        border-top: 2px solid #2196F3;
+                        position: relative;
+                    }
+                    
+                    .drop-before::before {
+                        content: '';
+                        position: absolute;
+                        top: -5px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        border-left: 5px solid transparent;
+                        border-right: 5px solid transparent;
+                        border-top: 5px solid #2196F3;
+                    }
+                    
+                    .drop-after {
+                        border-bottom: 2px solid #2196F3;
+                        position: relative;
+                    }
+                    
+                    .drop-after::after {
+                        content: '';
+                        position: absolute;
+                        bottom: -5px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        border-left: 5px solid transparent;
+                        border-right: 5px solid transparent;
+                        border-bottom: 5px solid #2196F3;
+                    }
+                    
+                    /* 隱藏原有的移動按鈕 */
+                    .move-buttons {
+                        display: none !important;
+                    }
+                    
+                    /* 拖動句柄樣式 */
+                    .drag-handle {
+                        cursor: grab;
+                        margin-right: 8px;
+                        color: #999;
+                        transition: color 0.2s ease;
+                    }
+                    
+                    .drag-handle:hover {
+                        color: #2196F3;
+                    }
+                    
+                    .dragging .drag-handle,
+                    .drag-handle:active {
+                        cursor: grabbing;
+                        color: #2196F3;
+                    }
+                `;
+                
+                document.head.appendChild(style);
+            }
+
+            // 隱藏所有現有的移動按鈕
+            function hideExistingMoveButtons() {
+                // 隱藏所有移動按鈕容器
+                const moveButtonsContainers = document.querySelectorAll('.move-buttons');
+                moveButtonsContainers.forEach(container => {
+                    container.style.display = 'none';
+                });
+            }
+
+            //更新班次目標UI
+            function updateShiftTargetUI() {
+                const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+                
+                // 初始化班次目標值
+                for (let day = 1; day <= daysInMonth; day++) {
+                    // 如果沒有設置過該日期的目標，則設置默認值
+                    if (!shiftTargets.D[day]) {
+                        shiftTargets.D[day] = defaultShiftTargets.D;
+                    }
+                    if (!shiftTargets.E[day]) {
+                        shiftTargets.E[day] = defaultShiftTargets.E;
+                    }
+                    if (!shiftTargets.N[day]) {
+                        shiftTargets.N[day] = defaultShiftTargets.N;
+                    }
+                    
+                    // 更新輸入框值
+                    const dInput = document.getElementById(`D-count-day-${day}`);
+                    const eInput = document.getElementById(`E-count-day-${day}`);
+                    const nInput = document.getElementById(`N-count-day-${day}`);
+                    
+                    if (dInput && eInput && nInput) {
+                        // 輸入框默認值為目標人數
+                        dInput.value = shiftTargets.D[day];
+                        eInput.value = shiftTargets.E[day];
+                        nInput.value = shiftTargets.N[day];
+                        
+                        // 移除舊的事件監聽器（避免重複綁定）
+                        dInput.replaceWith(dInput.cloneNode(true));
+                        eInput.replaceWith(eInput.cloneNode(true));
+                        nInput.replaceWith(nInput.cloneNode(true));
+                        
+                        // 重新獲取元素
+                        const newDInput = document.getElementById(`D-count-day-${day}`);
+                        const newEInput = document.getElementById(`E-count-day-${day}`);
+                        const newNInput = document.getElementById(`N-count-day-${day}`);
+                        
+                        // 添加編輯事件
+                        newDInput.addEventListener('change', function() {
+                            shiftTargets.D[day] = parseInt(this.value) || 0;
+                            updateDailyShiftStatus();
+                            saveToHistory();
+                        });
+                        
+                        newEInput.addEventListener('change', function() {
+                            shiftTargets.E[day] = parseInt(this.value) || 0;
+                            updateDailyShiftStatus();
+                            saveToHistory();
+                        });
+                        
+                        newNInput.addEventListener('change', function() {
+                            shiftTargets.N[day] = parseInt(this.value) || 0;
+                            updateDailyShiftStatus();
+                            saveToHistory();
+                        });
+                    }
+                }
+                
+                // 初始化完成後更新狀態
+                updateDailyShiftStatus();
+            }
+            // 更新每日班次狀態 - 與目標人數比較
+            function updateDailyShiftStatus() {
+                const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+                
+                for (let day = 1; day <= daysInMonth; day++) {
+                    // 計算實際班次數量
+                    const dateKey = `${selectedYear}-${selectedMonth}-${day}`;
+                    let dCount = 0, eCount = 0, nCount = 0;
+                    
+                    employees.forEach(employee => {
+                        const employeeKey = employee.name;
+                        if (scheduleData[dateKey] && scheduleData[dateKey][employeeKey]) {
+                            const shift = scheduleData[dateKey][employeeKey];
+                            if (shift === 'D') dCount++;
+                            else if (shift === 'E') eCount++;
+                            else if (shift === 'N') nCount++;
+                        }
+                    });
+                    
+                    // 獲取目標數量
+                    const dTarget = shiftTargets.D[day] || defaultShiftTargets.D;
+                    const eTarget = shiftTargets.E[day] || defaultShiftTargets.E;
+                    const nTarget = shiftTargets.N[day] || defaultShiftTargets.N;
+                    
+                    // 更新UI，顯示實際計數，並且提示與目標的比較
+                    const dInput = document.getElementById(`D-count-day-${day}`);
+                    const eInput = document.getElementById(`E-count-day-${day}`);
+                    const nInput = document.getElementById(`N-count-day-${day}`);
+                    
+                    if (dInput && eInput && nInput) {
+                        // 顯示實際計數
+                        dInput.value = dCount;
+                        dInput.title = `目標: ${dTarget}，實際: ${dCount}`;
+                        
+                        eInput.value = eCount;
+                        eInput.title = `目標: ${eTarget}，實際: ${eCount}`;
+                        
+                        nInput.value = nCount;
+                        nInput.title = `目標: ${nTarget}，實際: ${nCount}`;
+                        
+                        // 根據實際計數與目標比較設置樣式
+                        if (dCount < dTarget) {
+                            dInput.style.color = "#000000"; // 人數不足 - 黑色
+                            dInput.style.fontWeight = "bold";
+                        } else if (dCount > dTarget) {
+                            dInput.style.color = "#FF0000"; // 人數超過 - 紅色
+                            dInput.style.fontWeight = "bold";
+                        } else {
+                            dInput.style.color = "#2E7D32"; // 正好 - 綠色
+                            dInput.style.fontWeight = "bold";
+                        }
+                        
+                        if (eCount < eTarget) {
+                            eInput.style.color = "#000000";
+                            eInput.style.fontWeight = "bold";
+                        } else if (eCount > eTarget) {
+                            eInput.style.color = "#FF0000";
+                            eInput.style.fontWeight = "bold";
+                        } else {
+                            eInput.style.color = "#2E7D32";
+                            eInput.style.fontWeight = "bold";
+                        }
+                        
+                        if (nCount < nTarget) {
+                            nInput.style.color = "#000000";
+                            nInput.style.fontWeight = "bold";
+                        } else if (nCount > nTarget) {
+                            nInput.style.color = "#FF0000";
+                            nInput.style.fontWeight = "bold";
+                        } else {
+                            nInput.style.color = "#2E7D32";
+                            nInput.style.fontWeight = "bold";
+                        }
+                    }
+                }
+            }
+
+            // 更新班次輸入框樣式
+            function updateShiftInputStyle(inputElement, actualCount, targetCount) {
+                if (!inputElement) return;
+                
+                // 強制轉換為數字進行比較
+                actualCount = parseInt(actualCount) || 0;
+                targetCount = parseInt(targetCount) || 0;
+                
+                // 直接設置樣式
+                if (actualCount < targetCount) {
+                    // 人數不足 - 黑色
+                    inputElement.style.color = "#000000";
+                    inputElement.style.fontWeight = "bold";
+                    inputElement.title = `人數不足: ${actualCount}/${targetCount}`;
+                } else if (actualCount > targetCount) {
+                    // 人數超過 - 紅色
+                    inputElement.style.color = "#FF0000";
+                    inputElement.style.fontWeight = "bold";
+                    inputElement.title = `人數超過: ${actualCount}/${targetCount}`;
+                } else {
+                    // 正好符合 - 綠色
+                    inputElement.style.color = "#2E7D32";
+                    inputElement.style.fontWeight = "bold";
+                    inputElement.title = `人數正好: ${actualCount}/${targetCount}`;
+                }
+            }
+
+            // 添加批量修改功能 - 按星期幾設置
+            function addBatchTargetSettings() {
+                // 創建設置區塊
+                const settingSection = document.createElement('div');
+                settingSection.className = 'setting-section';
+                settingSection.innerHTML = `
+                    <div class="setting-title">批量設置班次目標人數</div>
+                    <div class="batch-settings">
+                        <div class="batch-setting-row">
+                            <label>統一設置所有日期:</label>
+                            <div class="target-inputs">
+                                <div class="target-input-group">
+                                    <label>D班:</label>
+                                    <input type="number" id="uniform-D-target" class="form-control" value="${defaultShiftTargets.D}" min="0" max="20">
+                                </div>
+                                <div class="target-input-group">
+                                    <label>E班:</label>
+                                    <input type="number" id="uniform-E-target" class="form-control" value="${defaultShiftTargets.E}" min="0" max="20">
+                                </div>
+                                <div class="target-input-group">
+                                    <label>N班:</label>
+                                    <input type="number" id="uniform-N-target" class="form-control" value="${defaultShiftTargets.N}" min="0" max="20">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="setting-row-small">
+                            <span>設置後點擊「套用設置」，系統將對本月所有日期應用相同的班次目標人數</span>
+                        </div>
+                        <div class="batch-setting-actions">
+                            <button id="btnApplyBatchTarget" class="secondary">套用設置到本月</button>
+                            <button id="btnSaveDefaultTarget" class="secondary">儲存為默認值</button>
+                        </div>
+                    </div>
+                `;
+                
+                // 添加到偏好設置頁面
+                const preferencesTab = document.getElementById('preferencesTab');
+                preferencesTab.appendChild(settingSection);
+                
+                // 綁定批量設置事件
+                document.getElementById('btnApplyBatchTarget').addEventListener('click', applyBatchTargetSettings);
+                document.getElementById('btnSaveDefaultTarget').addEventListener('click', saveDefaultTargetSettings);
+            }
+
+            function saveDefaultTargetSettings() {
+                // 更新默認值
+                defaultShiftTargets.D = parseInt(document.getElementById('uniform-D-target').value) || defaultShiftTargets.D;
+                defaultShiftTargets.E = parseInt(document.getElementById('uniform-E-target').value) || defaultShiftTargets.E;
+                defaultShiftTargets.N = parseInt(document.getElementById('uniform-N-target').value) || defaultShiftTargets.N;
+                
+                showNotification('已儲存為默認班次目標設置', 'success');
+            }
+
+            // 套用批量班次目標設置
+            function applyBatchTargetSettings() {
+                // 保存操作到歷史記錄
+                saveToHistory();
+                
+                // 獲取設置的值
+                const dTarget = parseInt(document.getElementById('uniform-D-target').value) || defaultShiftTargets.D;
+                const eTarget = parseInt(document.getElementById('uniform-E-target').value) || defaultShiftTargets.E;
+                const nTarget = parseInt(document.getElementById('uniform-N-target').value) || defaultShiftTargets.N;
+                
+                // 獲取當前月份的天數
+                const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+                
+                // 應用到所有日期 - 不區分平日和假日
+                for (let day = 1; day <= daysInMonth; day++) {
+                    shiftTargets.D[day] = dTarget;
+                    shiftTargets.E[day] = eTarget;
+                    shiftTargets.N[day] = nTarget;
+                }
+                
+                // 更新統計行顯示
+                updateShiftTargetUI();
+                showNotification('已套用班次目標人數設置', 'success');
+                updateDailyShiftStatus();
+            }
+            
+            function validateLastMonthShiftInput(inputElement, employee) {
+                let value = inputElement.value.toUpperCase().trim();
+                
+                // 處理數字和字母快捷方式
+                switch(value) {
+                    case '1':
+                    case 'D':
+                    case 'd':
+                        value = 'D';
+                        break;
+                    case '2':
+                    case 'E':
+                    case 'e':
+                        value = 'E';
+                        break;
+                    case '3':
+                    case 'N':
+                    case 'n':
+                        value = 'N';
+                        break;
+                    case '4':
+                    case '0':
+                    case 'O':
+                    case 'o':
+                        value = 'OFF';
+                        break;
+                    case '5':
+                    case 'P':
+                    case 'p':
+                        value = 'P';
+                        break;
+                }
+                
+                // 檢查輸入是否有效
+                const validShifts = ['D', 'E', 'N', 'OFF', 'P', ''];
+                if (!validShifts.includes(value)) {
+                    // 如果無效，清除輸入
+                    inputElement.value = '';
+                    return;
+                }
+                
+                // 保存到員工資料
+                employee.lastMonthShift = value;
+                inputElement.value = value;
+                
+                // 更新樣式
+                const td = inputElement.parentElement;
+                td.classList.remove('cell-D', 'cell-E', 'cell-N', 'cell-OFF', 'cell-P');
+                
+                if (value) {
+                    td.classList.add(`cell-${value}`);
+                }
+                
+                // 設置OFF和P為紅色文字
+                if (value === 'OFF' || value === 'P') {
+                    inputElement.style.color = 'red';
+                } else {
+                    inputElement.style.color = '';
+                }
+            }
+
+            // 實現護理師行移動功能
+            function moveEmployee(index, direction) {
+                // 保存移動前的狀態到歷史記錄（如果有歷史記錄功能）
+                if (typeof saveToHistory === 'function') {
+                    saveToHistory();
+                }
+                
+                if (direction === 'up' && index > 0) {
+                    // 和上一行交換位置
+                    [employees[index], employees[index - 1]] = [employees[index - 1], employees[index]];
+                } else if (direction === 'down' && index < employees.length - 1) {
+                    // 和下一行交換位置
+                    [employees[index], employees[index + 1]] = [employees[index + 1], employees[index]];
+                } else {
+                    return; // 無效的移動
+                }
+                
+                // 重新生成排班表
+                generateScheduleTable();
+                
+                // 更新偏好設置表格（如果在偏好標籤頁）
+                renderPreferencesTable();
+                
+                // 更新護理師名稱背景顏色和班別統計行樣式
+                updateEmployeeNameCellStyle();
+                updateShiftSummaryRowStyles();
+                
+                // 更新表格顯示
+                updateScheduleDisplay();
+                
+                // 顯示通知
+                showNotification('護理師順序已調整', 'success');
+            }
+            
+            function addLastMonthDayStyles() {
+                const style = document.createElement('style');
+                style.textContent = `
+                .last-month-day {
+                    background-color: #FFFDE7 !important; /* 淺黃色背景 */
+                    border-left: 2px solid #FFA000 !important; /* 橙色邊框 */
+                    position: relative;
+                }
+                
+                .last-month-day::before {
+                    content: "";
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    height: 100%;
+                    width: 2px;
+                    background-color: #FFA000;
+                }
+                
+                .last-month-day-cell {
+                    background-color: #FFFDE7 !important; /* 淺黃色背景 */
+                    border-left: 2px solid #FFA000 !important; /* 橙色邊框 */
+                }
+                
+                .last-month-work-days-cell input {
+                    background-color: #F5F5F5;
+                    border: 1px solid #DDD;
+                    border-radius: 4px;
+                }
+                
+                /* 上月連續上班天數高亮 */
+                .last-month-work-days-input[value="4"],
+                .last-month-work-days-input[value="5"] {
+                    background-color: #FFF9C4 !important; /* 淺黃色警告 */
+                }
+                
+                .last-month-work-days-input[value="6"],
+                .last-month-work-days-input[value="7"] {
+                    background-color: #FFCC80 !important; /* 橙色警告 */
+                }
+                
+                .last-month-work-days-input[value="8"],
+                .last-month-work-days-input[value="9"],
+                .last-month-work-days-input[value="10"] {
+                    background-color: #FFAB91 !important; /* 紅橙色警告 */
+                    color: #D32F2F !important;
+                    font-weight: bold !important;
+                }
+                `;
+                
+                document.head.appendChild(style);
+            }
+
+            function addConsecutiveWorkDaysStyles() {
+                const style = document.createElement('style');
+                style.textContent = `
+                    /* Consecutive work days warning style - darker colors for > 5 days */
+                    .cell-D.consecutive-warning {
+                        background-color: #F57C00 !important; /* Darker orange for D shift */
+                    }
+                    
+                    .cell-E.consecutive-warning {
+                        background-color: #1976D2 !important; /* Darker blue for E shift */
+                    }
+                    
+                    .cell-N.consecutive-warning {
+                        background-color: #7B1FA2 !important; /* Darker purple for N shift */
+                    }
+                    
+                    /* Add text color adjustment for better contrast */
+                    .consecutive-warning input {
+                        color: white !important;
+                        font-weight: bold !important;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
+            function calculateConsecutiveWorkDays(employeeKey, dateKey) {
+                // Parse the date key to get year, month, day
+                const parts = dateKey.split('-');
+                const year = parseInt(parts[0]);
+                const month = parseInt(parts[1]);
+                const day = parseInt(parts[2]);
+                
+                // First check if the current day is a work day (not OFF or P)
+                const currentShift = scheduleData[dateKey] && scheduleData[dateKey][employeeKey] ? 
+                    scheduleData[dateKey][employeeKey] : '';
+                
+                if (currentShift === 'OFF' || currentShift === 'P' || currentShift === '') {
+                    return 0; // Not a work day, so consecutive count is 0
+                }
+                
+                // Start count at 1 (current day is a work day)
+                let consecutiveDays = 1;
+                
+                // Check previous days in the current month
+                for (let prevDay = day - 1; prevDay >= 1; prevDay--) {
+                    const prevDateKey = `${year}-${month}-${prevDay}`;
+                    const prevShift = scheduleData[prevDateKey] && scheduleData[prevDateKey][employeeKey] ? 
+                        scheduleData[prevDateKey][employeeKey] : '';
+                    
+                    // If the previous day was a work day, increment count
+                    if (prevShift !== 'OFF' && prevShift !== 'P' && prevShift !== '') {
+                        consecutiveDays++;
+                    } else {
+                        // Chain is broken, stop counting
+                        break;
+                    }
+                }
+                
+                // If we're at the beginning of the month, check the last month info
+                if (day === 1) {
+                    // Find the employee object to get last month info
+                    const employee = employees.find(emp => emp.name === employeeKey);
+                    if (employee) {
+                        const lastMonthShift = employee.lastMonthShift || '';
+                        const lastMonthWorkDays = employee.lastMonthWorkDays || 0;
+                        
+                        // If the last day of previous month was a work day and there were consecutive days
+                        if (lastMonthShift !== 'OFF' && lastMonthShift !== 'P' && lastMonthShift !== '' && lastMonthWorkDays > 0) {
+                            consecutiveDays += lastMonthWorkDays;
+                        }
+                    }
+                }
+                
+                return consecutiveDays;
+            }
+
+            // 將班別統計行設置為對應班別的顏色
+            function updateShiftSummaryRowStyles() {
+                // 獲取所有班別統計行
+                const summaryRows = document.querySelectorAll('tr.summary-row');
+                
+                // 遍歷所有班別統計行並應用樣式
+                summaryRows.forEach(row => {
+                    const labelCell = row.querySelector('td:first-child');
+                    if (labelCell) {
+                        const label = labelCell.textContent.trim();
+                        
+                        // 移除所有可能的班別背景色類
+                        row.classList.remove('summary-D-row', 'summary-E-row', 'summary-N-row');
+                        
+                        // 根據班別標籤設置行背景色
+                        if (label === 'D班') {
+                            row.classList.add('summary-D-row');
+                        } else if (label === 'E班') {
+                            row.classList.add('summary-E-row');
+                        } else if (label === 'N班') {
+                            row.classList.add('summary-N-row');
+                        }
+                    }
+                });
+            }
+            
+            addLastMonthDayStyles();
+
+            // 移動到下一個單元格（用於輸入後自動跳轉）
+            function moveToNextCell(inputElement) {
+                const cell = inputElement.parentElement;
+                const row = cell.parentElement;
+                const currentIndex = Array.from(row.cells).indexOf(cell);
+                
+                // 如果不是最後一個單元格，則移動到右側的單元格
+                if (currentIndex < row.cells.length - 3) {
+                    const nextCell = row.cells[currentIndex + 1];
+                    const nextInput = nextCell.querySelector('input.shift-input');
+                    if (nextInput) {
+                        nextInput.focus();
+                        nextInput.select();
+                    }
+                }
+            }
+
+            function enhanceInputEventHandlers() {
+                document.querySelectorAll('.shift-input').forEach(input => {
+                    // 移除現有的事件監聽器（避免重複）
+                    input.removeEventListener('input', function() {
+                        validateShiftInput(this);
+                    });
+                    input.removeEventListener('keyup', function() {});
+                    input.removeEventListener('blur', function() {});
+                    input.removeEventListener('keydown', function() {});
+                    
+                    // 添加新的事件監聽器
+                    input.addEventListener('input', function() {
+                        validateShiftInput(this);
+                    });
+                    
+                    // 添加keyup事件以立即響應鍵盤輸入
+                    input.addEventListener('keyup', function(event) {
+                        // 如果是數字或字母鍵，立即進行轉換
+                        const validKeys = ['0', '1', '2', '3', '4', '5', 'd', 'e', 'n', 'o', 'p', 'D', 'E', 'N', 'O', 'P'];
+                        if (validKeys.includes(event.key)) {
+                            this.value = event.key; // 先設置值為按下的鍵
+                            validateShiftInput(this); // 然後驗證和轉換
+                        }
+                    });
+                    
+                    // 添加失去焦點事件確保值被驗證
+                    input.addEventListener('blur', function() {
+                        // 確保P值在失去焦點後仍然顯示為OFF
+                        const originalValue = this.dataset.originalValue;
+                        if (originalValue === 'P' && this.value !== 'OFF') {
+                            this.value = 'OFF';
+                        }
+                    });
+                    
+                    // 添加鍵盤導航事件
+                    input.addEventListener('keydown', function(event) {
+                        handleKeyNavigation(event, this);
+                    });
+                });
+            }
+
+            function addFinalPStyles() {
+                const style = document.createElement('style');
+                style.textContent = `
+                    /* 預假(P)樣式 - 僅保留虛線邊框，無小標記 */
+                    td[data-is-p="true"], 
+                    td.cell-P {
+                        background-color: #FFCDD2 !important;
+                        outline: 2px dashed #9C27B0 !important;
+                        outline-offset: -2px !important;
+                        border: 1px solid transparent !important;
+                        position: relative !important;
+                        z-index: 1 !important;
+                    }
+                    
+                    /* 移除之前可能添加的小P標記 */
+                    td[data-is-p="true"]::after,
+                    td.cell-P::after {
+                        content: none !important;
+                    }
+                    
+                    /* 確保輸入框樣式正確 */
+                    td[data-is-p="true"] input,
+                    td.cell-P input {
+                        color: #FF0000 !important;
+                        background-color: transparent !important;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
+            // 更新班次樣式
+            function updateShiftStyle(element) {
+                // 獲取原始值（實際儲存的值）
+                const originalShift = element.dataset.originalValue || element.value;
+                const td = element.parentElement;
+                
+                // 獲取日期和護理師信息
+                const dateKey = element.dataset.date;
+                const employeeKey = element.dataset.employee;
+                
+                // 保存週末和法定假日標記
+                const isWeekend = td.classList.contains('weekend-cell');
+                const isHoliday = td.classList.contains('holiday-cell');
+                
+                // 移除所有班次樣式類和連續工作警告類
+                td.classList.remove('cell-E', 'cell-D', 'cell-N', 'cell-OFF', 'cell-P');
+                td.classList.remove('consecutive-warning');
+                
+                // 根據原始值添加樣式類，這樣P值會添加cell-P類
+                if (originalShift && originalShift !== '') {
+                    td.classList.add(`cell-${originalShift}`);
+                    
+                    // 為P值添加特殊標記，但不顯示小P
+                    if (originalShift === 'P') {
+                        td.setAttribute('data-is-p', 'true');
+                    } else {
+                        td.removeAttribute('data-is-p');
+                    }
+                    
+                    // 如果是工作日（非OFF或P），檢查連續工作天數
+                    if (originalShift !== 'OFF' && originalShift !== 'P' && dateKey && employeeKey) {
+                        const consecutiveDays = calculateConsecutiveWorkDays(employeeKey, dateKey);
+                        
+                        // 如果連續工作天數超過5天，添加警告類
+                        if (consecutiveDays > 5) {
+                            td.classList.add('consecutive-warning');
+                            td.setAttribute('title', `警告: 已連續上班${consecutiveDays}天`);
+                            element.setAttribute('title', `警告: 已連續上班${consecutiveDays}天`);
+                        }
+                    }
+                }
+                
+                // 設置OFF和P為紅色文字
+                if (originalShift === 'OFF' || originalShift === 'P') {
+                    element.style.color = 'red';
+                } else {
+                    element.style.color = '';
+                }
+                
+                // 恢復週末和法定假日標記（如果有）
+                if (isWeekend) td.classList.add('weekend-cell');
+                if (isHoliday) td.classList.add('holiday-cell');
+            }
+
+            // 更新渲染護理師姓名的函數，確保在偏好變更時更新背景色
+            function updatePreferenceListener() {
+                document.querySelectorAll('.preference-select').forEach(select => {
+                    select.addEventListener('change', function() {
+                        // 原有的偏好更新代碼
+                        const selectedValue = this.value;
+                        const row = this.closest('tr');
+                        const employeeNameCell = row.querySelector('.employee-name');
+                        const employeeName = employeeNameCell.textContent.split('(')[0].trim();
+                        
+                        // 查找對應的員工並更新偏好
+                        const employee = employees.find(emp => emp.name === employeeName);
+                        if (employee) {
+                            employee.preferences = selectedValue ? [selectedValue] : [];
+                            
+                            // 更新姓名單元格的背景色
+                            employeeNameCell.classList.remove('pref-E-bg', 'pref-D-bg', 'pref-N-bg');
+                            if (selectedValue === 'E') {
+                                employeeNameCell.classList.add('pref-E-bg');
+                            } else if (selectedValue === 'D') {
+                                employeeNameCell.classList.add('pref-D-bg');
+                            } else if (selectedValue === 'N') {
+                                employeeNameCell.classList.add('pref-N-bg');
+                            }
+                        }
+                    });
+                });
+            }
+
+            function integrateConsecutiveDaysFeature() {
+                // Add CSS styles first
+                addConsecutiveWorkDaysStyles();
+                
+                // Save the original function
+                const originalUpdateShiftStyle = window.updateShiftStyle;
+                
+                // Replace with our enhanced version
+                window.updateShiftStyle = updateShiftStyleWithConsecutiveWarning;
+                
+                // Also modify updateScheduleDisplay to update consecutive days
+                const originalUpdateScheduleDisplay = window.updateScheduleDisplay;
+                if (typeof originalUpdateScheduleDisplay === 'function') {
+                    window.updateScheduleDisplay = function() {
+                        originalUpdateScheduleDisplay.apply(this, arguments);
+                        // After regular update, apply consecutive days warnings
+                        updateConsecutiveDaysDisplay();
+                    };
+                }
+                
+                // Update the validation function to trigger our consecutive day check
+                const originalValidateShiftInput = window.validateShiftInput;
+                if (typeof originalValidateShiftInput === 'function') {
+                    window.validateShiftInput = function(inputElement) {
+                        originalValidateShiftInput.apply(this, arguments);
+                        // After regular validation, recalculate consecutive days for all shifts
+                        updateConsecutiveDaysDisplay();
+                    };
+                }
+                
+                // Apply to current display
+                updateConsecutiveDaysDisplay();
+                
+                console.log("連續上班天數警告功能已成功整合!");
+            }
+
+            function updateShiftStyleWithConsecutiveWarning(element) {
+                // Get the original value (actually stored value)
+                const originalShift = element.dataset.originalValue || element.value;
+                const td = element.parentElement;
+                
+                // Get date and employee info from the element's dataset
+                const dateKey = element.dataset.date;
+                const employeeKey = element.dataset.employee;
+                
+                // Save weekend and holiday markers
+                const isWeekend = td.classList.contains('weekend-cell');
+                const isHoliday = td.classList.contains('holiday-cell');
+                
+                // Remove all shift style classes
+                td.classList.remove('cell-E', 'cell-D', 'cell-N', 'cell-OFF', 'cell-P');
+                td.classList.remove('consecutive-warning'); // Remove consecutive days warning class
+                
+                // Add style class based on the original value
+                if (originalShift && originalShift !== '') {
+                    td.classList.add(`cell-${originalShift}`);
+                    
+                    // Add special marker for P value
+                    if (originalShift === 'P') {
+                        td.setAttribute('data-is-p', 'true');
+                    } else {
+                        td.removeAttribute('data-is-p');
+                    }
+                    
+                    // If it's a work day (not OFF or P), check consecutive days
+                    if (originalShift !== 'OFF' && originalShift !== 'P') {
+                        const consecutiveDays = calculateConsecutiveWorkDays(employeeKey, dateKey);
+                        
+                        // If consecutive days > 5, add warning class
+                        if (consecutiveDays > 5) {
+                            td.classList.add('consecutive-warning');
+                            td.setAttribute('title', `警告: 已連續上班${consecutiveDays}天`);
+                            element.setAttribute('title', `警告: 已連續上班${consecutiveDays}天`);
+                        }
+                    }
+                }
+                
+                // Set OFF and P to red text
+                if (originalShift === 'OFF' || originalShift === 'P') {
+                    element.style.color = 'red';
+                } else {
+                    element.style.color = '';
+                }
+                
+                // Restore weekend and holiday markers (if any)
+                if (isWeekend) td.classList.add('weekend-cell');
+                if (isHoliday) td.classList.add('holiday-cell');
+            }
+
+            function updateConsecutiveDaysDisplay() {
+                document.querySelectorAll('.shift-input').forEach(input => {
+                    const dateKey = input.dataset.date;
+                    const employeeKey = input.dataset.employee;
+                    
+                    if (!dateKey || !employeeKey) return;
+                    
+                    // Get current shift
+                    const currentShift = scheduleData[dateKey] && scheduleData[dateKey][employeeKey] ? 
+                        scheduleData[dateKey][employeeKey] : '';
+                        
+                    // Skip OFF days and empty cells
+                    if (currentShift === 'OFF' || currentShift === 'P' || currentShift === '') return;
+                    
+                    const td = input.parentElement;
+                    td.classList.remove('consecutive-warning');
+                    
+                    // Calculate consecutive days
+                    const consecutiveDays = calculateConsecutiveWorkDays(employeeKey, dateKey);
+                    
+                    // Apply warning if > 5 days
+                    if (consecutiveDays > 5) {
+                        td.classList.add('consecutive-warning');
+                        td.setAttribute('title', `警告: 已連續上班${consecutiveDays}天`);
+                        input.setAttribute('title', `警告: 已連續上班${consecutiveDays}天`);
+                    }
+                });
+            }
+
+            function validateShiftInput(inputElement) {
+                let value = inputElement.value.toUpperCase().trim();
+                
+                // 處理"O"作為"OFF"的快捷方式
+                if (value === "O" || value === "F") {
+                    value = "OFF";
+                }
+                
+                // 檢查輸入是否有效
+                const validShifts = ['D', 'E', 'N', 'OFF', 'P', ''];
+                if (!validShifts.includes(value)) {
+                    // 如果無效，清除輸入
+                    inputElement.value = '';
+                    return;
+                }
+                
+                // 設置驗證後的值
+                inputElement.value = value;
+                
+                // 更新班別樣式並保存變更
+                updateShiftStyle(inputElement);
+                saveShiftChange(inputElement);
+                updateSummary();
+                updateDailyShiftStatus();
+            }
+            
+            // 處理鍵盤導航
+            function handleKeyNavigation(event, inputElement) {
+                // 當前單元格及其位置
+                const cell = inputElement.parentElement;
+                const row = cell.parentElement;
+                const currentIndex = Array.from(row.cells).indexOf(cell);
+                
+                // 獲取行索引（排除標題行和摘要行）
+                const tbody = row.parentElement;
+                const rowIndex = Array.from(tbody.rows).indexOf(row);
+                
+                let targetCell = null;
+                let targetInput = null;
+                
+                // 處理方向鍵
+                switch (event.key) {
+                    case 'ArrowUp':
+                        // 向上移動
+                        if (rowIndex > 0) {
+                            const previousRow = tbody.rows[rowIndex - 1];
+                            // 確保目標行不是摘要行
+                            if (previousRow && !previousRow.classList.contains('summary-row') && 
+                                previousRow.cells[currentIndex]) {
+                                targetCell = previousRow.cells[currentIndex];
+                            }
+                        }
+                        break;
+                    
+                    case 'ArrowDown':
+                        // 向下移動
+                        if (rowIndex < tbody.rows.length - 1) {
+                            const nextRow = tbody.rows[rowIndex + 1];
+                            // 確保目標行不是摘要行
+                            if (nextRow && !nextRow.classList.contains('summary-row') && 
+                                nextRow.cells[currentIndex]) {
+                                targetCell = nextRow.cells[currentIndex];
+                            }
+                        }
+                        break;
+                        
+                    case 'ArrowLeft':
+                        // 向左移動，跳過前面的設置列（如Leader、長假等）
+                        if (currentIndex > 5) {
+                            targetCell = row.cells[currentIndex - 1];
+                        }
+                        break;
+                        
+                    case 'ArrowRight':
+                        // 向右移動，避開統計列
+                        if (currentIndex < row.cells.length - 3) {
+                            targetCell = row.cells[currentIndex + 1];
+                        }
+                        break;
+                        
+                    case 'Enter':
+                        // Enter鍵移動到下一行同列
+                        if (rowIndex < tbody.rows.length - 1) {
+                            const nextRow = tbody.rows[rowIndex + 1];
+                            if (nextRow && !nextRow.classList.contains('summary-row') && 
+                                nextRow.cells[currentIndex]) {
+                                targetCell = nextRow.cells[currentIndex];
+                            }
+                        }
+                        break;
+                        
+                    case 'Tab':
+                        // 不需要處理Tab鍵，瀏覽器自己會處理跳轉
+                        return;
+                        
+                    // 不需要默認操作
+                    default:
+                        return;
+                }
+                
+                // 如果找到目標單元格，聚焦其中的輸入元素
+                if (targetCell) {
+                    targetInput = targetCell.querySelector('input.shift-input');
+                    if (targetInput) {
+                        event.preventDefault(); // 防止默認滾動
+                        targetInput.focus();
+                        targetInput.select(); // 選中文本以便於替換
+                    }
+                }
+            }
+
+            // 保存班次變更
+            function saveShiftChange(inputElement) {
+                // 保存變更前的狀態到歷史記錄
+                if (!isUndoingOrRedoing) {
+                    saveToHistory();
+                }
+                
+                const dateKey = inputElement.dataset.date;
+                const employeeKey = inputElement.dataset.employee;
+                // 使用原始值而不是顯示值 - 這確保P值被正確儲存
+                const shiftValue = inputElement.dataset.originalValue || inputElement.value;
+                
+                if (!scheduleData[dateKey]) {
+                    scheduleData[dateKey] = {};
+                }
+                
+                scheduleData[dateKey][employeeKey] = shiftValue;
+            }
+
+            // 更新統計摘要
+            function updateSummary() {
+                const summaryTableBody = document.getElementById('summaryTableBody');
+                summaryTableBody.innerHTML = '';
+                
+                const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+                
+                // 跟踪是否有護理師超過休假上限
+                let hasOverLimitNurses = false;
+                let overLimitNurseNames = [];
+                
+                employees.forEach(employee => {
+                    const employeeKey = employee.name;
+                    const counts = {};
+                    
+                    // 初始化計數器
+                    shifts.filter(s => s).forEach(shift => {
+                        counts[shift] = 0;
+                    });
+                    
+                    // 計算每種班次的數量
+                    for (let day = 1; day <= daysInMonth; day++) {
+                        const dateKey = `${selectedYear}-${selectedMonth}-${day}`;
+                        if (scheduleData[dateKey] && scheduleData[dateKey][employeeKey]) {
+                            const shift = scheduleData[dateKey][employeeKey];
+                            if (shift && shift !== '') {
+                                counts[shift] = (counts[shift] || 0) + 1;
+                            }
+                        }
+                    }
+                    
+                    // 計算總班數和休假天數 (OFF和P都算休假)
+                    const totalWorkDays = counts.E + counts.D + counts.N;
+                    const totalOffDays = (counts.OFF || 0) + (counts.P || 0);
+                    
+                    // 獲取該護理師的休假天數上限
+                    let vacationLimit = vacationSettings.normalNurse;
+                    if (employee.hasLongVacation) {
+                        vacationLimit = vacationSettings.longVacation;
+                    } else if (employee.isPartTime) {
+                        vacationLimit = vacationSettings.partTime;
+                    }
+                    
+                    // 檢查是否超過休假上限
+                    if (totalOffDays > vacationLimit) {
+                        hasOverLimitNurses = true;
+                        overLimitNurseNames.push(employeeKey);
+                        
+                        // 標記該護理師的所有OFF和P單元格為超標
+                        for (let day = 1; day <= daysInMonth; day++) {
+                            const dateKey = `${selectedYear}-${selectedMonth}-${day}`;
+                            if (scheduleData[dateKey] && 
+                                (scheduleData[dateKey][employeeKey] === 'OFF' || scheduleData[dateKey][employeeKey] === 'P')) {
+                                // 查找對應的輸入元素
+                                const inputElement = document.querySelector(`input[data-date="${dateKey}"][data-employee="${employeeKey}"]`);
+                                if (inputElement) {
+                                    // 添加超標樣式
+                                    inputElement.classList.add('over-limit-off');
+                                    // 設置標記屬性用於工具提示
+                                    inputElement.setAttribute('data-over-limit', 'true');
+                                    inputElement.setAttribute('title', `超過休假上限 (${vacationLimit}天)`);
+                                }
+                            }
+                        }
+                    } else {
+                        // 移除所有超標標記
+                        for (let day = 1; day <= daysInMonth; day++) {
+                            const dateKey = `${selectedYear}-${selectedMonth}-${day}`;
+                            if (scheduleData[dateKey] && 
+                               (scheduleData[dateKey][employeeKey] === 'OFF' || scheduleData[dateKey][employeeKey] === 'P')) {
+                                const inputElement = document.querySelector(`input[data-date="${dateKey}"][data-employee="${employeeKey}"]`);
+                                if (inputElement) {
+                                    inputElement.classList.remove('over-limit-off');
+                                    inputElement.removeAttribute('data-over-limit');
+                                    inputElement.removeAttribute('title');
+                                }
+                            }
+                        }
+                    }
+                    
+                    // 更新每個護理師行的休假天數統計
+                    const employeeRow = Array.from(document.querySelectorAll(`input[data-employee="${employeeKey}"]`))[0]?.closest('tr');
+                    if (employeeRow) {
+                        const offDaysCell = employeeRow.querySelector('.off-days-count');
+                        if (offDaysCell) {
+                            // 清除舊的類
+                            offDaysCell.classList.remove('off-days-normal', 'off-days-exact', 'off-days-over');
+                            
+                            // 根據休假天數與上限的比較添加相應的類
+                            if (totalOffDays < vacationLimit) {
+                                offDaysCell.classList.add('off-days-normal');
+                            } else if (totalOffDays === vacationLimit) {
+                                offDaysCell.classList.add('off-days-exact');
+                            } else {
+                                offDaysCell.classList.add('off-days-over');
+                            }
+                            
+                            // 添加休假上限顯示
+                            if (totalOffDays > vacationLimit) {
+                                // 超過上限時顯示警告標記
+                                offDaysCell.innerHTML = `<span class="vacation-warning">${totalOffDays || 0} / ${vacationLimit}</span>`;
+                            } else {
+                                offDaysCell.innerHTML = `${totalOffDays || 0} / ${vacationLimit}`;
+                            }
+                        }
+                        
+                        employeeRow.querySelector('.work-days-count').textContent = totalWorkDays || 0;
+                    }
+                    
+                    // 創建摘要行
+                    const tr = document.createElement('tr');
+                    
+                    // 護理師姓名
+                    const nameTd = document.createElement('td');
+                    nameTd.textContent = `${employee.name}${employee.position ? `(${employee.position})` : ''}`;
+                    tr.appendChild(nameTd);
+                    
+                    // 各班次數量
+                    tr.appendChild(createTd(counts.E || 0));
+                    tr.appendChild(createTd(counts.D || 0));
+                    tr.appendChild(createTd(counts.N || 0));
+                    tr.appendChild(createTd(counts.OFF || 0));
+                    tr.appendChild(createTd(counts.P || 0));
+                    
+                    // 總班數
+                    tr.appendChild(createTd(totalWorkDays || 0));
+                    
+                    // 休假天數
+                    let offDaysContent = `${totalOffDays || 0} / ${vacationLimit}`;
+                    if (totalOffDays > vacationLimit) {
+                        // 添加警告圖標
+                        offDaysContent = `<span class="vacation-warning">${offDaysContent}</span>`;
+                    }
+                    
+                    const offDaysTd = createTd(offDaysContent);
+                    // 根據休假天數與上限的比較添加相應的類
+                    if (totalOffDays < vacationLimit) {
+                        offDaysTd.classList.add('off-days-normal');
+                    } else if (totalOffDays === vacationLimit) {
+                        offDaysTd.classList.add('off-days-exact');
+                    } else {
+                        offDaysTd.classList.add('off-days-over');
+                    }
+                    tr.appendChild(offDaysTd);
+                    
+                    summaryTableBody.appendChild(tr);
+                });
+                
+                // 如果有護理師超過休假上限，顯示通知
+                if (hasOverLimitNurses) {
+                    let message = '';
+                    if (overLimitNurseNames.length === 1) {
+                        message = `${overLimitNurseNames[0]} 已超過休假天數上限！`;
+                    } else {
+                        message = `${overLimitNurseNames.join('、')} 已超過休假天數上限！`;
+                    }
+                    showNotification(message, 'error', 5000); // 顯示5秒
+                }
+                
+                function createTd(text) {
+                    const td = document.createElement('td');
+                    td.innerHTML = text;
+                    return td;
+                }
+            }
+
+            // 更新每日班次統計
+            function updateDailyShiftCount() {
+                const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+                
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const dateKey = `${selectedYear}-${selectedMonth}-${day}`;
+                    let dCount = 0, eCount = 0, nCount = 0;
+                    
+                    // 計算每個日期的各班次數量
+                    employees.forEach(employee => {
+                        const employeeKey = employee.name;
+                        if (scheduleData[dateKey] && scheduleData[dateKey][employeeKey]) {
+                            const shift = scheduleData[dateKey][employeeKey];
+                            if (shift === 'D') dCount++;
+                            else if (shift === 'E') eCount++;
+                            else if (shift === 'N') nCount++;
+                        }
+                    });
+                    
+                    // 更新統計行的值
+                    document.getElementById(`D-count-day-${day}`).value = dCount;
+                    document.getElementById(`E-count-day-${day}`).value = eCount;
+                    document.getElementById(`N-count-day-${day}`).value = nCount;
+                }
+            }
+            
+            // 儲存排班表
+            function saveSchedule() {
+                if (employees.length === 0) {
+                    showNotification('沒有護理師資料可儲存', 'error');
+                    return;
+                }
+                
+                // 收集每日班次統計數據
+                const dailyStatData = {};
+                const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+                
+                for (let day = 1; day <= daysInMonth; day++) {
+                    dailyStatData[day] = {
+                        D: document.getElementById(`D-count-day-${day}`).value,
+                        E: document.getElementById(`E-count-day-${day}`).value,
+                        N: document.getElementById(`N-count-day-${day}`).value
+                    };
+                }
+                
+                // 添加休假設置數據
+                const saveData = {
+                    employees: employees,
+                    scheduleData: scheduleData,
+                    dailyStatData: dailyStatData,
+                    year: selectedYear,
+                    month: selectedMonth,
+                    vacationSettings: vacationSettings // 新增: 保存休假天數設置
+                };
+                
+                const saveJSON = JSON.stringify(saveData);
+                const blob = new Blob([saveJSON], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `護理師排班表_${selectedYear}年${selectedMonth}月.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showNotification('排班表儲存成功', 'success');
+            }
+
+            // 載入排班表
+            function loadSchedule() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                
+                input.addEventListener('change', function(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const loadedData = JSON.parse(e.target.result);
+                            
+                            // 驗證數據格式
+                            if (!loadedData.employees || !loadedData.scheduleData) {
+                                throw new Error('檔案格式不正確');
+                            }
+                            
+                            employees = loadedData.employees;
+                            scheduleData = loadedData.scheduleData;
+                            selectedYear = loadedData.year || selectedYear;
+                            selectedMonth = loadedData.month || selectedMonth;
+                            
+                            // 載入休假設置（如果有）
+                            if (loadedData.vacationSettings) {
+                                vacationSettings = loadedData.vacationSettings;
+                                initVacationSettings(); // 更新UI顯示
+                            }
+                            
+                            // 更新選擇器
+                            yearSelector.value = selectedYear;
+                            monthSelector.value = selectedMonth;
+                            
+                            // 重新生成表格
+                            generateScheduleTable();
+                            renderPreferencesTable();
+                            
+                            // 如果有每日統計數據，則還原
+                            if (loadedData.dailyStatData) {
+                                const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+                                for (let day = 1; day <= daysInMonth; day++) {
+                                    if (loadedData.dailyStatData[day]) {
+                                        document.getElementById(`D-count-day-${day}`).value = loadedData.dailyStatData[day].D;
+                                        document.getElementById(`E-count-day-${day}`).value = loadedData.dailyStatData[day].E;
+                                        document.getElementById(`N-count-day-${day}`).value = loadedData.dailyStatData[day].N;
+                                    }
+                                }
+                            }
+                            updateDailyShiftStatus();
+                            showNotification('排班表載入成功', 'success');
+                        } catch (error) {
+                            showNotification('檔案載入失敗: ' + error.message, 'error');
+                        }
+                    };
+                    reader.readAsText(file);
+                });
+                
+                input.click();
+            }
+
+            // 綁定按鈕事件
+            undoBtn.addEventListener('click', undoAction);
+            redoBtn.addEventListener('click', redoAction);
+            clearBtn.addEventListener('click', function() {
+                clearConfirmModal.style.display = 'block';
+            });
+            confirmClearBtn.addEventListener('click', clearAllSchedule);
+            cancelClearBtn.addEventListener('click', function() {
+                clearConfirmModal.style.display = 'none';
+            });
+            clearModalClose.addEventListener('click', function() {
+                clearConfirmModal.style.display = 'none';
+            });
+
+            // 點擊模態框外部關閉
+            window.addEventListener('click', function(event) {
+                if (event.target === clearConfirmModal) {
+                    clearConfirmModal.style.display = 'none';
+                }
+            });
+
+            // 添加鍵盤快捷鍵
+            document.addEventListener('keydown', function(event) {
+                // Ctrl+Z: 復原
+                if (event.ctrlKey && event.key === 'z') {
+                    event.preventDefault();
+                    if (!undoBtn.disabled) {
+                        undoAction();
+                    }
+                }
+                
+                // Ctrl+Y: 重做
+                if (event.ctrlKey && event.key === 'y') {
+                    event.preventDefault();
+                    if (!redoBtn.disabled) {
+                        redoAction();
+                    }
+                }
+            });
+            // 創建初始歷史記錄點
+            function initHistory() {
+                // 清空歷史記錄和重做堆疊
+                historyStack = [];
+                redoStack = [];
+                
+                // 添加初始狀態
+                historyStack.push(JSON.stringify(scheduleData));
+                
+                // 更新按鈕狀態
+                undoBtn.disabled = true;
+                redoBtn.disabled = true;
+            }
+            // 列印排班表（不再使用）
+            function printSchedule() {
+                if (employees.length === 0) {
+                    showNotification('沒有護理師資料可列印', 'error');
+                    return;
+                }
+                
+                window.print();
+            }
+            
+            // 匯出為Excel檔案
+            function exportToExcel() {
+                if (employees.length === 0) {
+                    showNotification('沒有護理師資料可匯出', 'error');
+                    return;
+                }
+                
+                // 創建工作簿
+                const wb = XLSX.utils.book_new();
+                
+                // 匯出預班表格式（含顏色編碼）
+                exportPreScheduleSheet(wb);
+                
+                // 匯出月排班表 (作為參考)
+                exportMonthlyScheduleSheet(wb);
+                
+                // 匯出護理師偏好設置表 (作為參考)
+                exportPreferencesSheet(wb);
+                
+                // 匯出統計數據表 (作為參考)
+                exportSummarySheet(wb);
+                
+                // 導出Excel文件
+                XLSX.writeFile(wb, `護理師預班表_${selectedYear}年${selectedMonth}月.xlsx`);
+                showNotification('預班表已成功匯出為Excel檔案', 'success');
+            }
+
+            // 匯出預班表格式（含顏色編碼）
+            function exportPreScheduleSheet(wb) {
+                const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+                
+                // 準備工作表數據
+                const wsData = [];
+                
+                // 添加標題行
+                wsData.push(['護理部 預班表']);
+                wsData.push([`${selectedYear}年 ${selectedMonth}月`]);
+                wsData.push(['']);  // 空行
+                
+                // 準備日期行
+                const dateRow = ['護理師\\日期'];
+                const weekdayRow = [''];
+                
+                // 填充日期和星期
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const date = new Date(selectedYear, selectedMonth - 1, day);
+                    const weekdayNames = ['日', '一', '二', '三', '四', '五', '六'];
+                    const weekday = weekdayNames[date.getDay()];
+                    
+                    dateRow.push(day);
+                    weekdayRow.push(weekday);
+                }
+                
+                // 添加統計欄位
+                dateRow.push('', '班數統計');
+                weekdayRow.push('', 'D', 'E', 'N', 'OFF', 'P', '總班數');
+                
+                wsData.push(dateRow);
+                wsData.push(weekdayRow);
+                
+                // 添加護理師排班資料
+                employees.forEach(employee => {
+                    const employeeKey = employee.name;
+                    const rowData = [employee.name + (employee.position ? `(${employee.position})` : '')];
+                    
+                    // 班次計數器
+                    const counts = { D: 0, E: 0, N: 0, OFF: 0, P: 0 };
+                    
+                    // 填充每天的班別
+                    for (let day = 1; day <= daysInMonth; day++) {
+                        const dateKey = `${selectedYear}-${selectedMonth}-${day}`;
+                        let cellShift = scheduleData[dateKey] && scheduleData[dateKey][employeeKey] ? 
+                            scheduleData[dateKey][employeeKey] : '';
+                        
+                        // 關鍵修改：P班在Excel中保持顯示為P
+                        rowData.push(cellShift);
+                        
+                        // 計算各班次數量
+                        if (cellShift && counts[cellShift] !== undefined) {
+                            counts[cellShift]++;
+                        }
+                    }
+                    
+                    // 添加空白格
+                    rowData.push('');
+                    
+                    // 添加班次統計
+                    rowData.push(counts.D);
+                    rowData.push(counts.E);
+                    rowData.push(counts.N);
+                    rowData.push(counts.OFF);
+                    rowData.push(counts.P);
+                    rowData.push(counts.D + counts.E + counts.N + counts.P);  // 總班數
+                    
+                    wsData.push(rowData);
+                });
+                
+                // 添加空行
+                wsData.push(['']);
+                
+                // 添加每日班次統計
+                const dShiftCount = ['D班人數'];
+                const eShiftCount = ['E班人數'];
+                const nShiftCount = ['N班人數'];
+                
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const dCount = document.getElementById(`D-count-day-${day}`).value;
+                    const eCount = document.getElementById(`E-count-day-${day}`).value;
+                    const nCount = document.getElementById(`N-count-day-${day}`).value;
+                    
+                    dShiftCount.push(dCount);
+                    eShiftCount.push(eCount);
+                    nShiftCount.push(nCount);
+                }
+                
+                // 添加空白格和總計
+                dShiftCount.push('', '', '', '', '', '', '');
+                eShiftCount.push('', '', '', '', '', '', '');
+                nShiftCount.push('', '', '', '', '', '', '');
+                
+                wsData.push(dShiftCount);
+                wsData.push(eShiftCount);
+                wsData.push(nShiftCount);
+                
+                // 添加備註和簽名欄
+                wsData.push(['']);
+                wsData.push(['備註：']);
+                wsData.push(['']);
+                wsData.push(['單位主管：', '', '', '護理長：', '', '', '填表人：']);
+                
+                // 創建工作表
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                
+                // 設定列寬 - 增加第一列寬度，縮小日期列寬度
+                const cols = [{ wch: 25 }]; // 第一列寬度增加到25
+                for (let i = 0; i < daysInMonth; i++) {
+                    cols.push({ wch: 5 }); // 日期列寬度縮小
+                }
+                cols.push({ wch: 5 }); // 空白列
+                for (let i = 0; i < 6; i++) {
+                    cols.push({ wch: 8 }); // 統計列寬度
+                }
+                ws['!cols'] = cols;
+                
+                // 設定行高 - 使表格更緊湊
+                if (!ws['!rows']) ws['!rows'] = [];
+                for (let i = 0; i < wsData.length; i++) {
+                    // 為班別行設置較小的高度
+                    if (i >= 5 && i < 5 + employees.length) {
+                        ws['!rows'][i] = { hpt: 20 }; // 約20像素高
+                    }
+                }
+                
+                // 設定合併儲存格
+                const merges = [
+                    { s: { r: 0, c: 0 }, e: { r: 0, c: daysInMonth } },  // 標題列
+                    { s: { r: 1, c: 0 }, e: { r: 1, c: daysInMonth } }   // 年月列
+                ];
+                ws['!merges'] = merges;
+                
+                // 為工作表添加顏色樣式
+                addColorStyles(ws, wsData, daysInMonth);
+                
+                // 添加到工作簿
+                XLSX.utils.book_append_sheet(wb, ws, '預班表');
+            }
+            // 匯出護理師偏好設置表
+            function exportPreferencesSheet(wb) {
+                // 準備護理師設置資料
+                const settingsWsData = [];
+                
+                // 標題行 (A-G列)
+                const settingsHeaderRow = [
+                    '護理師', '偏好班別', 'Leader', '長假', '半職', 
+                    '上月最後一天班別', '上月底上班天數'
+                ];
+                settingsWsData.push(settingsHeaderRow);
+                
+                // 護理師設置行
+                employees.forEach(employee => {
+                    const rowData = [
+                        employee.name + (employee.position ? `(${employee.position})` : ''),
+                        employee.preferences ? employee.preferences.join(', ') : '',
+                        employee.isLeader ? 'TRUE' : 'FALSE',
+                        employee.hasLongVacation ? 'TRUE' : 'FALSE',
+                        employee.isPartTime ? 'TRUE' : 'FALSE',
+                        employee.lastMonthShift || '',
+                        employee.lastMonthWorkDays || 0
+                    ];
+                    
+                    settingsWsData.push(rowData);
+                });
+                
+                // 創建護理師設置工作表
+                const settingsWs = XLSX.utils.aoa_to_sheet(settingsWsData);
+                
+                // 設置欄寬
+                const settingsCols = settingsHeaderRow.map(() => ({ wch: 15 }));
+                settingsWs['!cols'] = settingsCols;
+                
+                XLSX.utils.book_append_sheet(wb, settingsWs, '護理師設置');
+            }
+            // 應用休假設置
+            function applyVacationSettings() {
+                // 獲取設置值
+                vacationSettings.normalNurse = parseInt(document.getElementById('normalNurseVacation').value) || 8;
+                vacationSettings.longVacation = parseInt(document.getElementById('longVacationDays').value) || 13;
+                vacationSettings.partTime = parseInt(document.getElementById('partTimeVacationDays').value) || 19;
+                
+                // 顯示通知
+                showNotification('休假天數設置已更新', 'success');
+                
+                // 可以選擇在這裡自動更新排班表
+                generateScheduleTable();
+            }
+
+            // 初始化設置輸入框值
+            function initVacationSettings() {
+                document.getElementById('normalNurseVacation').value = vacationSettings.normalNurse;
+                document.getElementById('longVacationDays').value = vacationSettings.longVacation;
+                document.getElementById('partTimeVacationDays').value = vacationSettings.partTime;
+            }
+
+            // 自動分配休假天數
+            function autoAssignVacation() {
+                if (employees.length === 0) {
+                    showNotification('沒有護理師資料可排班', 'error');
+                    return;
+                }
+                
+                // 確認是否要覆蓋現有排班
+                if (!confirm('此操作將根據設定的休假天數自動排休假，可能會覆蓋現有的排班。是否繼續？')) {
+                    return;
+                }
+                
+                // 獲取當前月份的天數
+                const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+                
+                // 處理每個護理師
+                employees.forEach(employee => {
+                    // 根據護理師類型決定休假天數
+                    let vacationDays = vacationSettings.normalNurse;
+                    if (employee.hasLongVacation) {
+                        vacationDays = vacationSettings.longVacation;
+                    } else if (employee.isPartTime) {
+                        vacationDays = vacationSettings.partTime;
+                    }
+                    
+                    // 清除現有的OFF標記，以便重新分配
+                    for (let day = 1; day <= daysInMonth; day++) {
+                        const dateKey = `${selectedYear}-${selectedMonth}-${day}`;
+                        if (!scheduleData[dateKey]) {
+                            scheduleData[dateKey] = {};
+                        }
+                        
+                        // 如果之前是休假，則清除
+                        if (scheduleData[dateKey][employee.name] === 'OFF') {
+                            scheduleData[dateKey][employee.name] = '';
+                        }
+                    }
+                    
+                    // 智能分配休假天數
+                    distributeVacationDays(employee, vacationDays, daysInMonth);
+                });
+                
+                // 更新表格顯示
+                updateScheduleDisplay();
+                
+                // 更新統計
+                updateSummary();
+                updateDailyShiftCount();
+                
+                showNotification(`已為所有護理師自動分配休假`, 'success');
+            }
+
+            // 智能分配休假天數
+            function distributeVacationDays(employee, totalVacationDays, daysInMonth) {
+                // 收集可用的休假日 - 優先考慮週末和假日
+                const potentialVacationDays = [];
+                
+                // 先加入週末和假日
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const date = new Date(selectedYear, selectedMonth - 1, day);
+                    const dayOfWeek = date.getDay();
+                    const dateKey = `${selectedYear}-${selectedMonth}-${day}`;
+                    
+                    // 如果這天沒有安排班別，且是週末或假日，優先考慮
+                    if (!scheduleData[dateKey][employee.name] || scheduleData[dateKey][employee.name] === '') {
+                        // 權重計算: 週末或假日有更高優先級
+                        let weight = 1;
+                        if (dayOfWeek === 0 || dayOfWeek === 6) {
+                            weight = 3; // 週末權重高
+                        }
+                        if (isTaiwanHoliday(selectedYear, selectedMonth, day)) {
+                            weight = 4; // 假日權重最高
+                        }
+                        
+                        potentialVacationDays.push({
+                            day: day,
+                            dateKey: dateKey,
+                            weight: weight
+                        });
+                    }
+                }
+                
+                // 再加入平日
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const date = new Date(selectedYear, selectedMonth - 1, day);
+                    const dayOfWeek = date.getDay();
+                    const dateKey = `${selectedYear}-${selectedMonth}-${day}`;
+                    
+                    // 如果這天沒有安排班別，且是平日，次優先考慮
+                    if ((!scheduleData[dateKey][employee.name] || scheduleData[dateKey][employee.name] === '') && 
+                        dayOfWeek !== 0 && dayOfWeek !== 6 && !isTaiwanHoliday(selectedYear, selectedMonth, day)) {
+                        potentialVacationDays.push({
+                            day: day,
+                            dateKey: dateKey,
+                            weight: 1 // 平日權重低
+                        });
+                    }
+                }
+                
+                // 根據權重排序
+                potentialVacationDays.sort((a, b) => b.weight - a.weight);
+                
+                // 分配休假天數
+                let assignedDays = 0;
+                let index = 0;
+                while (assignedDays < totalVacationDays && index < potentialVacationDays.length) {
+                    const vacDay = potentialVacationDays[index];
+                    scheduleData[vacDay.dateKey][employee.name] = 'OFF';
+                    assignedDays++;
+                    index++;
+                }
+                
+                // 如果可用天數不足，則顯示警告
+                if (assignedDays < totalVacationDays) {
+                    showNotification(`警告: ${employee.name} 無法分配全部 ${totalVacationDays} 天休假，只分配了 ${assignedDays} 天`, 'error');
+                }
+            }
+
+            // 更新表格顯示
+            function updateScheduleDisplay() {
+                // 獲取所有班別輸入框並更新
+                document.querySelectorAll('.shift-input').forEach(input => {
+                    const dateKey = input.dataset.date;
+                    const employeeKey = input.dataset.employee;
+                    
+                    // 清除超標標記
+                    input.classList.remove('over-limit-off');
+                    input.removeAttribute('data-over-limit');
+                    input.removeAttribute('title');
+                    
+                    // 獲取實際儲存的值
+                    let actualValue = '';
+                    if (scheduleData[dateKey] && scheduleData[dateKey][employeeKey] !== undefined) {
+                        actualValue = scheduleData[dateKey][employeeKey];
+                    }
+                    
+                    // 保存原始值到dataset
+                    input.dataset.originalValue = actualValue;
+                    
+                    // 設置顯示值，P顯示為OFF
+                    if (actualValue === 'P') {
+                        input.value = 'OFF';
+                    } else {
+                        input.value = actualValue;
+                    }
+                    
+                    // 更新單元格樣式
+                    updateShiftStyle(input);
+                });
+                
+                // 在更新表格後重新設置事件監聽器
+                enhanceInputEventHandlers();
+            }
+
+            function addColorStyles(ws, wsData, daysInMonth) {
+                if (!ws['!rows']) ws['!rows'] = [];
+                
+                // 設定基本單元格樣式
+                for (let r = 0; r < wsData.length; r++) {
+                    if (!ws['!rows'][r]) ws['!rows'][r] = {};
+                    
+                    for (let c = 0; c < wsData[r].length; c++) {
+                        const cell_ref = XLSX.utils.encode_cell({r: r, c: c});
+                        if (!ws[cell_ref]) continue;
+                        
+                        if (!ws[cell_ref].s) ws[cell_ref].s = {};
+                        
+                        // 為標題設置樣式
+                        if (r <= 1) {
+                            ws[cell_ref].s.font = {bold: true, sz: 14};
+                            ws[cell_ref].s.alignment = {horizontal: "center"};
+                        }
+                        
+                        // 為表頭設置樣式
+                        if (r === 3 || r === 4) {
+                            ws[cell_ref].s.font = {bold: true};
+                            ws[cell_ref].s.alignment = {horizontal: "center"};
+                            ws[cell_ref].s.fill = {fgColor: {rgb: "E0E0E0"}};
+                        }
+                        
+                        // 為護理師名稱設置樣式
+                        if (c === 0 && r >= 5 && r < 5 + employees.length) {
+                            ws[cell_ref].s.font = {bold: true};
+                        }
+                        
+                        // 為班次統計標題設置樣式
+                        if (c >= daysInMonth + 2 && r === 4) {
+                            ws[cell_ref].s.font = {bold: true};
+                            ws[cell_ref].s.alignment = {horizontal: "center"};
+                            ws[cell_ref].s.fill = {fgColor: {rgb: "C0C0C0"}};
+                        }
+                        
+                        // 為匯總行設置樣式
+                        if (r >= wsData.length - 7 && r < wsData.length - 4) {
+                            ws[cell_ref].s.font = {bold: true};
+                            if (c === 0) {
+                                ws[cell_ref].s.alignment = {horizontal: "left"};
+                            } else {
+                                ws[cell_ref].s.alignment = {horizontal: "center"};
+                            }
+                        }
+                        
+                        // 為備註和簽名欄設置樣式
+                        if (r >= wsData.length - 3) {
+                            ws[cell_ref].s.font = {bold: true};
+                        }
+                        
+                        // 為班別單元格添加顏色編碼
+                        if (r >= 5 && r < 5 + employees.length && c >= 1 && c <= daysInMonth) {
+                            const cellValue = wsData[r][c];
+                            
+                            // 根據班別設置不同的顏色，同時設置居中對齊
+                            ws[cell_ref].s.alignment = {horizontal: "center", vertical: "center"};
+                            
+                            switch(cellValue) {
+                                case 'E': // 白班 - 淺藍色
+                                    ws[cell_ref].s.fill = {fgColor: {rgb: "BBDEFB"}}; // Light blue
+                                    break;
+                                case 'D': // 日班 - 橘色
+                                    ws[cell_ref].s.fill = {fgColor: {rgb: "FFE0B2"}}; // Light orange
+                                    break;
+                                case 'N': // 夜班 - 淺紫色
+                                    ws[cell_ref].s.fill = {fgColor: {rgb: "E1BEE7"}}; // Light purple
+                                    break;
+                                case 'OFF': // 休假 - 粉紅色，文字為紅色
+                                    ws[cell_ref].s.fill = {fgColor: {rgb: "FFCDD2"}}; // Pink
+                                    ws[cell_ref].s.font = {color: {rgb: "FF0000"}}; // Red text
+                                    break;
+                                case 'P': // 預假 - 粉紅色背景，紅色文字，虛線邊框
+                                    ws[cell_ref].s.fill = {fgColor: {rgb: "FFCDD2"}}; // Pink (same as OFF)
+                                    ws[cell_ref].s.font = {color: {rgb: "FF0000"}}; // Red text
+                                    ws[cell_ref].s.border = {
+                                        top: {style: "dashed", color: {rgb: "9C27B0"}},
+                                        right: {style: "dashed", color: {rgb: "9C27B0"}},
+                                        bottom: {style: "dashed", color: {rgb: "9C27B0"}},
+                                        left: {style: "dashed", color: {rgb: "9C27B0"}}
+                                    };
+                                    break;
+                            }
+                        }
+                        
+                        // 為統計數據添加淺灰色背景
+                        if (r >= 5 && r < 5 + employees.length && c > daysInMonth + 1) {
+                            ws[cell_ref].s.fill = {fgColor: {rgb: "F5F5F5"}};
+                            ws[cell_ref].s.alignment = {horizontal: "center"};
+                        }
+                        
+                        // 為週末日期添加特殊顏色
+                        if (r === 3 && c >= 1 && c <= daysInMonth) {
+                            const date = new Date(selectedYear, selectedMonth - 1, c);
+                            const dayOfWeek = date.getDay();
+                            
+                            if (dayOfWeek === 0 || dayOfWeek === 6) { // 週末
+                                ws[cell_ref].s.fill = {fgColor: {rgb: "FFCCBC"}}; // 淺橘紅色
+                                if (dayOfWeek === 0) { // 星期日
+                                    ws[cell_ref].s.font = {color: {rgb: "FF0000"}}; // 紅色文字
+                                }
+                            }
+                            
+                            // 檢查是否為法定假日
+                            if (isTaiwanHoliday(selectedYear, selectedMonth, c)) {
+                                ws[cell_ref].s.fill = {fgColor: {rgb: "FFCCBC"}}; // 淺橘紅色
+                                ws[cell_ref].s.font = {color: {rgb: "FF0000"}}; // 紅色文字
+                            }
+                        }
+                        
+                        // 為星期標記設置樣式
+                        if (r === 4 && c >= 1 && c <= daysInMonth) {
+                            const date = new Date(selectedYear, selectedMonth - 1, c);
+                            const dayOfWeek = date.getDay();
+                            
+                            if (dayOfWeek === 0) { // 星期日
+                                ws[cell_ref].s.font = {color: {rgb: "FF0000"}}; // 紅色文字
+                            } else if (dayOfWeek === 6) { // 星期六
+                                ws[cell_ref].s.font = {color: {rgb: "0000FF"}}; // 藍色文字
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 添加自定義CSS樣式到頁面
+            function addCustomPStyles() {
+                const style = document.createElement('style');
+                style.textContent = `
+                    /* 預假(P)相關樣式 */
+                    .cell-P, td:has(input[value="OFF"][data-actual-value="P"]) {
+                        background-color: #FFCDD2 !important;
+                        border: 2px dashed #9C27B0 !important;
+                        min-width: 55px !important;
+                        width: 55px !important;
+                        padding: 0 2px !important;
+                        position: relative !important;
+                    }
+                    
+                    /* 確保P班的虛線邊框正確顯示 */
+                    td.cell-P, 
+                    td:has(input[value="OFF"][data-actual-value="P"]) {
+                        outline: 2px dashed #9C27B0 !important;
+                        outline-offset: -2px !important;
+                        border: 1px solid transparent !important;
+                        position: relative !important;
+                        z-index: 1 !important;
+                    }
+                    
+                    /* 添加一個標記來區分預假 */
+                    td.cell-P::after,
+                    td:has(input[value="OFF"][data-actual-value="P"])::after {
+                        content: "預";
+                        position: absolute;
+                        top: 1px;
+                        right: 1px;
+                        font-size: 8px;
+                        color: #9C27B0;
+                        background-color: rgba(255, 255, 255, 0.7);
+                        padding: 1px;
+                        border-radius: 2px;
+                        pointer-events: none;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            // 匯出月排班表
+            function exportMonthlyScheduleSheet(wb) {
+                const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+                
+                // 準備表頭
+                const headers = ['班別'];
+                for (let day = 1; day <= daysInMonth; day++) {
+                    headers.push(day.toString());
+                }
+                // 添加統計列
+                headers.push('OFF', '工作天數');
+                
+                // 按班別分組的護理師數據
+                const shiftGroups = {};
+                shifts.filter(s => s).forEach(shift => {
+                    shiftGroups[shift] = [];
+                });
+                
+                // 將護理師按偏好班別分組
+                employees.forEach(employee => {
+                    const mainPreference = employee.preferences && employee.preferences.length > 0 ? 
+                        employee.preferences[0] : 'E'; // 默認為E班
+                    
+                    if (!shiftGroups[mainPreference]) {
+                        shiftGroups[mainPreference] = [];
+                    }
+                    
+                    shiftGroups[mainPreference].push(employee);
+                });
+                
+                // 準備工作表數據
+                const wsData = [headers];
+                
+                // 按班別組織數據
+                for (const shift of ['D', 'E', 'N', 'OFF', 'P']) {
+                    if (shiftGroups[shift] && shiftGroups[shift].length > 0) {
+                        // 添加班別標題行
+                        wsData.push([`${shift}班`, ...Array(daysInMonth + 2).fill('')]);
+                        
+                        // 添加該班別的護理師數據
+                        shiftGroups[shift].forEach(employee => {
+                            const employeeKey = employee.name;
+                            const employeeName = employee.name + (employee.position ? `(${employee.position})` : '');
+                            const rowData = [employeeName];
+                            
+                            let offDays = 0;
+                            let workDays = 0;
+                            
+                            // 填充每天的班別
+                            for (let day = 1; day <= daysInMonth; day++) {
+                                const dateKey = `${selectedYear}-${selectedMonth}-${day}`;
+                                const cellShift = scheduleData[dateKey] && scheduleData[dateKey][employeeKey] ? 
+                                    scheduleData[dateKey][employeeKey] : 'E';
+                                
+                                rowData.push(cellShift);
+                                
+                                // 計算休假和工作天數
+                                if (cellShift === 'OFF') {
+                                    offDays++;
+                                } else if (cellShift && cellShift !== '') {
+                                    workDays++;
+                                }
+                            }
+                            
+                            // 添加統計數據
+                            rowData.push(offDays.toString());
+                            rowData.push(workDays.toString());
+                            
+                            wsData.push(rowData);
+                        });
+                        
+                        // 添加空行分隔不同班別
+                        wsData.push(Array(daysInMonth + 3).fill(''));
+                    }
+                }
+                
+                // 添加每日班次統計
+                wsData.push(['日別人數統計', ...Array(daysInMonth + 2).fill('')]);
+                
+                const dailyStats = [
+                    {id: 'D-count', label: 'D班'},
+                    {id: 'E-count', label: 'E班'},
+                    {id: 'N-count', label: 'N班'}
+                ];
+                
+                dailyStats.forEach(stat => {
+                    const rowData = [stat.label];
+                    
+                    for (let day = 1; day <= daysInMonth; day++) {
+                        const value = document.getElementById(`${stat.id}-day-${day}`).value;
+                        rowData.push(value);
+                    }
+                    
+                    // 添加空白單元格（對應休假數和工作天數）
+                    rowData.push('');
+                    rowData.push('');
+                    
+                    wsData.push(rowData);
+                });
+                
+                // 創建工作表
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                
+                // 設定列寬
+                const cols = [{ wch: 20 }]; // 第一列寬度
+                for (let i = 0; i < daysInMonth; i++) {
+                    cols.push({ wch: 6 }); // 日期列寬度
+                }
+                cols.push({ wch: 8 }, { wch: 8 }); // 統計列寬度
+                ws['!cols'] = cols;
+                
+                // 添加到工作簿
+                XLSX.utils.book_append_sheet(wb, ws, '月排班表');
+            }
+            
+            // 匯出統計摘要表
+            function exportSummarySheet(wb) {
+                // 準備護理師統計摘要資料
+                const summaryWsData = [];
+                
+                // 標題行
+                const summaryHeaderRow = ['護理師', '白班(E)', '日班(D)', '夜班(N)', '休假(OFF)', '預假(P)', '總班數', '休假天數'];
+                summaryWsData.push(summaryHeaderRow);
+                
+                // 護理師統計行
+                const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+                
+                employees.forEach(employee => {
+                    const employeeKey = employee.name;
+                    const counts = {};
+                    shifts.filter(s => s).forEach(shift => counts[shift] = 0);
+                    
+                    for (let day = 1; day <= daysInMonth; day++) {
+                        const dateKey = `${selectedYear}-${selectedMonth}-${day}`;
+                        if (scheduleData[dateKey] && scheduleData[dateKey][employeeKey]) {
+                            const shift = scheduleData[dateKey][employeeKey];
+                            if (shift && shift !== '') {
+                                counts[shift] = (counts[shift] || 0) + 1;
+                            }
+                        }
+                    }
+                    
+                    const totalWorkDays = counts.E + counts.D + counts.N + counts.R;
+                    const totalOffDays = counts.OFF;
+                    
+                    const rowData = [
+                        employeeKey + (employee.position ? `(${employee.position})` : ''),
+                        counts.E || 0,
+                        counts.D || 0,
+                        counts.N || 0,
+                        counts.OFF || 0,
+                        counts.P || 0,
+                        totalWorkDays || 0,
+                        totalOffDays || 0
+                    ];
+                    
+                    summaryWsData.push(rowData);
+                });
+                
+                // 添加總計行
+                const totalRow = ['總計'];
+                for (let i = 1; i < summaryHeaderRow.length; i++) {
+                    let columnSum = 0;
+                    for (let j = 1; j < summaryWsData.length; j++) {
+                        columnSum += summaryWsData[j][i] || 0;
+                    }
+                    totalRow.push(columnSum);
+                }
+                summaryWsData.push(totalRow);
+                
+                // 創建統計摘要工作表
+                const summaryWs = XLSX.utils.aoa_to_sheet(summaryWsData);
+                
+                // 設置欄寬
+                const summaryCols = summaryHeaderRow.map((header, index) => {
+                    return index === 0 ? { wch: 20 } : { wch: 10 };
+                });
+                summaryWs['!cols'] = summaryCols;
+                
+                XLSX.utils.book_append_sheet(wb, summaryWs, '統計摘要');
+            }
+            
+            // 顯示通知
+            function showNotification(message, type) {
+                const notification = document.getElementById('notification');
+                notification.textContent = message;
+                notification.className = 'notification ' + type;
+                notification.style.display = 'block';
+                
+                setTimeout(() => {
+                    notification.style.display = 'none';
+                }, 3000);
+            }
+
+            // 保存當前排班狀態到歷史記錄
+            function saveToHistory() {
+                // 如果正在執行復原或重做操作，不進行保存
+                if (isUndoingOrRedoing) return;
+                
+                // 創建當前排班數據的深拷貝
+                const currentState = JSON.stringify(scheduleData);
+                
+                // 檢查是否與上一次狀態相同，如果相同則不保存
+                if (historyStack.length > 0 && currentState === historyStack[historyStack.length - 1]) {
+                    return;
+                }
+                
+                // 添加到歷史記錄
+                historyStack.push(currentState);
+                
+                // 每次進行新操作後，清空重做堆疊
+                redoStack = [];
+                redoBtn.disabled = true;
+                
+                // 限制歷史記錄的大小，以防內存消耗過大
+                if (historyStack.length > maxHistorySize) {
+                    historyStack.shift(); // 移除最早的記錄
+                }
+                
+                // 啟用復原按鈕
+                undoBtn.disabled = false;
+            }
+
+            // 復原操作
+            function undoAction() {
+                if (historyStack.length <= 1) {
+                    undoBtn.disabled = true;
+                    return;
+                }
+                
+                isUndoingOrRedoing = true;
+                
+                // 保存當前狀態到重做堆疊
+                redoStack.push(historyStack.pop());
+                redoBtn.disabled = false;
+                
+                // 從歷史記錄恢復狀態
+                const previousState = historyStack[historyStack.length - 1];
+                scheduleData = JSON.parse(previousState);
+                
+                // 重要：徹底更新表格顯示
+                updateScheduleDisplay();
+                
+                // 清除所有超標標記
+                document.querySelectorAll('.shift-input').forEach(input => {
+                    input.classList.remove('over-limit-off');
+                    input.removeAttribute('data-over-limit');
+                    input.removeAttribute('title');
+                });
+                
+                // 更新統計
+                updateSummary();
+                updateDailyShiftCount();
+                
+                isUndoingOrRedoing = false;
+                
+                // 如果歷史記錄已空，禁用復原按鈕
+                if (historyStack.length <= 1) {
+                    undoBtn.disabled = true;
+                }
+            }
+
+            // 重做操作
+            function redoAction() {
+                if (redoStack.length === 0) {
+                    redoBtn.disabled = true;
+                    return;
+                }
+                
+                isUndoingOrRedoing = true;
+                
+                // 從重做堆疊恢復狀態
+                const nextState = redoStack.pop();
+                historyStack.push(nextState);
+                undoBtn.disabled = false;
+                
+                // 更新數據
+                scheduleData = JSON.parse(nextState);
+                
+                // 重要：徹底更新表格顯示
+                updateScheduleDisplay();
+                
+                // 清除所有超標標記
+                document.querySelectorAll('.shift-input').forEach(input => {
+                    input.classList.remove('over-limit-off');
+                    input.removeAttribute('data-over-limit');
+                    input.removeAttribute('title');
+                });
+                
+                // 更新統計
+                updateSummary();
+                updateDailyShiftCount();
+                
+                isUndoingOrRedoing = false;
+                
+                // 如果重做堆疊已空，禁用重做按鈕
+                if (redoStack.length === 0) {
+                    redoBtn.disabled = true;
+                }
+            }
+            
+            // 清除所有排班
+            function clearAllSchedule() {
+                // 保存當前狀態到歷史記錄
+                saveToHistory();
+                
+                // 清除排班數據
+                const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+                
+                // 徹底清除排班數據
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const dateKey = `${selectedYear}-${selectedMonth}-${day}`;
+                    
+                    // 對每個日期都創建一個新的空對象，確保完全刪除之前的引用
+                    scheduleData[dateKey] = {};
+                }
+                
+                // 清除所有輸入框的值
+                document.querySelectorAll('.shift-input').forEach(input => {
+                    input.value = '';
+                    // 清除單元格的所有特殊樣式類
+                    const td = input.parentElement;
+                    td.classList.remove('cell-E', 'cell-D', 'cell-N', 'cell-OFF', 'cell-P');
+                    
+                    // 清除超標標記
+                    input.classList.remove('over-limit-off');
+                    input.removeAttribute('data-over-limit');
+                    input.removeAttribute('title');
+                });
+                
+                // 更新統計
+                updateSummary();
+                updateDailyShiftCount();
+                
+                // 關閉確認對話框
+                clearConfirmModal.style.display = 'none';
+                
+                // 顯示通知
+                showNotification('所有排班已清除', 'success');
+            }
+
+            // 檢查是否為台灣法定假日
+            function isTaiwanHoliday(year, month, day) {
+                // 這裡可以添加台灣法定假日列表
+                // 格式：{年: {月: [日期列表]}}
+                const taiwanHolidays = {
+                    2025: {
+                        1: [1], // 元旦
+                        2: [28, 29, 30, 31], // 農曆春節假期
+                        3: [1], // 農曆春節假期
+                        4: [4, 5], // 清明節連假
+                        5: [1], // 勞動節
+                        6: [22, 23], // 端午節連假
+                        9: [27, 28, 29], // 中秋節連假
+                        10: [10] // 國慶日
+                    },
+                    2024: {
+                        1: [1], // 元旦
+                        2: [8, 9, 10, 11, 12, 13], // 農曆春節假期
+                        4: [4, 5, 6], // 清明節連假
+                        5: [1], // 勞動節
+                        6: [10], // 端午節
+                        9: [17], // 中秋節
+                        10: [10] // 國慶日
+                    }
+                };
+                
+                // 檢查給定日期是否在假日列表中
+                if (taiwanHolidays[year] && 
+                    taiwanHolidays[year][month] && 
+                    taiwanHolidays[year][month].includes(day)) {
+                    return true;
+                }
+                
+                return false;
+            }
+            function updatePDisplayAfterGeneration() {
+                // 更新所有P班顯示為OFF
+                document.querySelectorAll('.shift-input').forEach(input => {
+                    const originalValue = input.dataset.originalValue;
+                    if (originalValue === 'P') {
+                        input.value = 'OFF';
+                        updateShiftStyle(input);
+                    }
+                });
+            }
+
+            // 延遲執行以確保其他腳本已加載
+            setTimeout(function() {
+                addFinalPStyles();
+                
+                // 修改班別快捷键指南
+                const shortcutSection = document.querySelector('.keyboard-shortcuts-guide');
+                if (shortcutSection) {
+                    // 找到P班快捷鍵說明
+                    const pShortcutItem = Array.from(shortcutSection.querySelectorAll('.shortcut-item')).find(
+                        item => item.textContent.includes('P (預假)')
+                    );
+                    
+                    if (pShortcutItem) {
+                        // 更新說明，指出P會顯示為OFF
+                        const keyElement = pShortcutItem.querySelector('.key');
+                        if (keyElement && keyElement.nextSibling) {
+                            const text = keyElement.nextSibling.textContent;
+                            keyElement.nextSibling.textContent = text.replace(' = P', ' = OFF (預假)');
+                        }
+                    }
+                }
+            }, 500);
+            // 初始化：添加一些預設護理師作為範例
+            const defaultEmployees = [
+                {
+                    name: '張護理', 
+                    position: 'L',
+                    preferences: ['D'],
+                    isLeader: true,
+                    hasLongVacation: true,
+                    isPartTime: false,
+                    lastMonthShift: 'D',
+                    lastMonthWorkDays: 4
+                },
+                {
+                    name: '李護理', 
+                    position: 'L',
+                    preferences: ['D', 'E'],
+                    isLeader: true,
+                    hasLongVacation: false,
+                    isPartTime: false,
+                    lastMonthShift: 'E',
+                    lastMonthWorkDays: 1
+                },
+                {
+                    name: '王護理', 
+                    position: 'L',
+                    preferences: ['E'],
+                    isLeader: true,
+                    hasLongVacation: false,
+                    isPartTime: true,
+                    lastMonthShift: 'OFF',
+                    lastMonthWorkDays: 1
+                },
+                {
+                    name: '黃護士', 
+                    position: '',
+                    preferences: ['N'],
+                    isLeader: false,
+                    hasLongVacation: false,
+                    isPartTime: false,
+                    lastMonthShift: 'N',
+                    lastMonthWorkDays: 3
+                },
+                {
+                    name: '陳護士', 
+                    position: '',
+                    preferences: ['E'],
+                    isLeader: false,
+                    hasLongVacation: false,
+                    isPartTime: false,
+                    lastMonthShift: 'E',
+                    lastMonthWorkDays: 2
+                }
+            ];
+            
+            defaultEmployees.forEach(emp => {
+                employees.push(emp);
+            });
+            
+            // 初始化生成排班表
+            generateScheduleTable();
+            renderPreferencesTable();
+            updatePreferenceListener();
+            // 添加上個月最後一天樣式
+            addLastMonthDayStyles();
+            // 添加新的CSS樣式
+            addCustomStyles();
+            // 初始化上個月最後一天相關功能
+            updateLastMonthInfo();
+            // 添加拖曳相關的CSS樣式
+            addDragDropStyles();
+            // 在页面加载完成后设置表格滚动
+            setTimeout(enhanceTableScrolling, 100);
+            // 初始化后优化表格高度
+            setTimeout(optimizeTableHeight, 100);
+            setTimeout(function() {
+                addBatchTargetSettings();
+            }, 500);
+            // Add this call
+            setTimeout(setupScrollingWithRetry, 100);
+            });
+
+            // 確保在頁面加載後執行
+            setTimeout(function() {
+                addCustomPStyles();
+            }, 500);
+            // 給validateShiftInput添加更新連續天數顯示的功能
+            const originalValidateShiftInput = validateShiftInput;
+            validateShiftInput = function(inputElement) {
+                // 先調用原始函數
+                originalValidateShiftInput.call(this, inputElement);
+                
+                // 然後更新整個表格的連續工作天數顯示
+                setTimeout(updateConsecutiveDaysDisplay, 10);
+            };
+
+            // 給updateScheduleDisplay添加更新連續天數顯示的功能
+            const originalUpdateScheduleDisplay = updateScheduleDisplay;
+            updateScheduleDisplay = function() {
+                // 先調用原始函數
+                originalUpdateScheduleDisplay.call(this);
+                
+                // 然後更新整個表格的連續工作天數顯示
+                setTimeout(updateConsecutiveDaysDisplay, 10);
+            };
+
+            // 確保立即更新當前顯示
+            setTimeout(updateConsecutiveDaysDisplay, 100);
+    </script>
+</body>
+</html>
