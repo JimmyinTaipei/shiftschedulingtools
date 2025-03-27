@@ -45,23 +45,6 @@
     margin-top: 8px;
     margin-bottom: 15px;
 }/* 特別針對OFF和班別樣式 */
-.cell-P, td:has(input[value="P"]) {
-    background-color: #FFCDD2 !important;
-    border: 2px dashed #9C27B0 !important;
-    min-width: 55px !important;
-    width: 55px !important;
-    padding: 0 2px !important;
-}
-
-/* 確保P班的虛線邊框正確顯示 */
-td.cell-P, 
-td:has(input[value="P"]) {
-    outline: 2px dashed #9C27B0 !important;
-    outline-offset: -2px !important;
-    border: 1px solid transparent !important;
-    position: relative !important;
-    z-index: 1 !important;
-}
 
 .cell-D, td:has(input[value="D"]) {
     background-color: #FFE0B2 !important;
@@ -572,7 +555,6 @@ tr:hover .option-cell {
 /* 上個月末顯示樣式 */
 .last-month-day {
     background-color: #FFFDE7 !important;
-    border-left: 2px solid #FFA000 !important;
     position: relative;
 }
 
@@ -582,8 +564,6 @@ tr:hover .option-cell {
     top: 0;
     left: 0;
     height: 100%;
-    width: 2px;
-    background-color: #FFA000;
 }
 
 .last-month-day-cell {
@@ -1588,4 +1568,31 @@ thead {
     align-items: center;
     justify-content: center;
     font-weight: bold;
+}
+
+.cell-R, td:has(input[value="R"]) {
+    background-color: #FFEB3B !important; /* 黃色背景 */
+    min-width: 55px !important;
+    width: 55px !important;
+    padding: 0 2px !important;
+}
+
+/* 替換或添加 R 樣式的快捷鍵說明樣式 */
+.shift-sample.R-sample {
+    background-color: #FFEB3B; /* 黃色背景 */
+}
+
+/* 確保 R 班別文字為紅色 (當顯示為 OFF 時) */
+input[data-original-value="R"] {
+    color: red !important;
+}
+
+/* 將 R 添加到計算連續上班天數的排除班別 */
+td:has(.consecutive-warning) {
+    position: relative;
+}
+
+/* 更新 R 班別的顯示邏輯，使其正確地在復原/重做後保持狀態 */
+td:has(input[data-original-value="R"]) input.shift-input {
+    color: red !important;
 }

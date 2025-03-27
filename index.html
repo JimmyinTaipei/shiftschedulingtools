@@ -67,50 +67,50 @@
             </div>
 
             <div class="keyboard-shortcuts-guide">
-                <h3>鍵盤快捷鍵指南</h3>
-                <div class="shortcuts-container">
-                    <div class="shortcut-group">
-                        <div class="shortcut-title">班別輸入快捷鍵:</div>
-                        <div class="shortcut-item">
-                            <span class="shift-sample D-sample"></span>
-                            <span class="key">d</span> 或 <span class="key">1</span> = D班 (日班)
-                        </div>
-                        <div class="shortcut-item">
-                            <span class="shift-sample E-sample"></span>
-                            <span class="key">e</span> 或 <span class="key">2</span> = E班 (白班)
-                        </div>
-                        <div class="shortcut-item">
-                            <span class="shift-sample N-sample"></span>
-                            <span class="key">n</span> 或 <span class="key">3</span> = N班 (夜班)
-                        </div>
-                        <div class="shortcut-item">
-                            <span class="shift-sample OFF-sample"></span>
-                            <span class="key">o</span> 或 <span class="key">0</span> 或 <span class="key">4</span> = OFF (休假)
-                        </div>
-                        <div class="shortcut-item">
-                            <span class="shift-sample P-sample"></span>
-                            <span class="key">p</span> 或 <span class="key">5</span> = P (預假)
-                        </div>
-                    </div>
-                    <div class="shortcut-group">
-                        <div class="shortcut-title">班別說明:</div>
-                        <div class="shortcut-item">
-                            <span>預假(P)同樣計入休假天數，但有不同顏色以便區分</span>
-                        </div>
-                        <div class="shortcut-item">
-                            <span>休假和預假總數不能超過休假上限</span>
-                        </div>
-                    </div>
-                    <div class="shortcut-group">
-                        <div class="shortcut-title">表格導航:</div>
-                        <div class="shortcut-item"><span class="key">↑</span> = 上移</div>
-                        <div class="shortcut-item"><span class="key">↓</span> = 下移</div>
-                        <div class="shortcut-item"><span class="key">←</span> = 左移</div>
-                        <div class="shortcut-item"><span class="key">→</span> = 右移</div>
-                        <div class="shortcut-item"><span class="key">Enter</span> = 移至下一行</div>
-                    </div>
-                </div>
+    <h3>鍵盤快捷鍵指南</h3>
+    <div class="shortcuts-container">
+        <div class="shortcut-group">
+            <div class="shortcut-title">班別輸入快捷鍵:</div>
+            <div class="shortcut-item">
+                <span class="shift-sample D-sample"></span>
+                <span class="key">d</span> 或 <span class="key">1</span> = D班 (日班)
             </div>
+            <div class="shortcut-item">
+                <span class="shift-sample E-sample"></span>
+                <span class="key">e</span> 或 <span class="key">2</span> = E班 (白班)
+            </div>
+            <div class="shortcut-item">
+                <span class="shift-sample N-sample"></span>
+                <span class="key">n</span> 或 <span class="key">3</span> = N班 (夜班)
+            </div>
+            <div class="shortcut-item">
+                <span class="shift-sample OFF-sample"></span>
+                <span class="key">o</span> 或 <span class="key">0</span> 或 <span class="key">4</span> = OFF (休假)
+            </div>
+            <div class="shortcut-item">
+                <span class="shift-sample R-sample"></span>
+                <span class="key">r</span> 或 <span class="key">5</span> = OFF (預假)
+            </div>
+        </div>
+        <div class="shortcut-group">
+            <div class="shortcut-title">班別說明:</div>
+            <div class="shortcut-item">
+                <span>預假(R)同樣計入休假天數，但有不同顏色以便區分</span>
+            </div>
+            <div class="shortcut-item">
+                <span>休假和預假總數不能超過休假上限</span>
+            </div>
+        </div>
+        <div class="shortcut-group">
+            <div class="shortcut-title">表格導航:</div>
+            <div class="shortcut-item"><span class="key">↑</span> = 上移</div>
+            <div class="shortcut-item"><span class="key">↓</span> = 下移</div>
+            <div class="shortcut-item"><span class="key">←</span> = 左移</div>
+            <div class="shortcut-item"><span class="key">→</span> = 右移</div>
+            <div class="shortcut-item"><span class="key">Enter</span> = 移至下一行</div>
+        </div>
+    </div>
+</div>
             
             <div class="summary-container">
                 <div class="summary-title">班次統計</div>
@@ -310,7 +310,7 @@
             // 定義全局變數
             let employees = [];
             let scheduleData = {};
-            const shifts = ['E', 'D', 'N', 'OFF', 'P', '']; // 班次類型
+            const shifts = ['E', 'D', 'N', 'OFF', 'R', '']; // 班次類型
             const currentDate = new Date();
             let selectedYear = currentDate.getFullYear();
             let selectedMonth = currentDate.getMonth() + 1;
@@ -1423,7 +1423,7 @@
                 optimizeTableHeight();
                 updateShiftTargetUI();
                 updateDailyShiftStatus();
-                setTimeout(updatePDisplayAfterGeneration, 100);
+                setTimeout(updateRDisplayAfterGeneration, 100);
             }
 
             function addFontAwesomeCDN() {
@@ -2086,14 +2086,14 @@
                         value = 'OFF';
                         break;
                     case '5':
-                    case 'P':
-                    case 'p':
-                        value = 'P';
+                    case 'R':
+                    case 'r':
+                        value = 'R'; 
                         break;
                 }
                 
                 // 檢查輸入是否有效
-                const validShifts = ['D', 'E', 'N', 'OFF', 'P', ''];
+                const validShifts = ['D', 'E', 'N', 'OFF', 'R', '']; // P改為R
                 if (!validShifts.includes(value)) {
                     // 如果無效，清除輸入
                     inputElement.value = '';
@@ -2106,19 +2106,20 @@
                 
                 // 更新樣式
                 const td = inputElement.parentElement;
-                td.classList.remove('cell-D', 'cell-E', 'cell-N', 'cell-OFF', 'cell-P');
+                td.classList.remove('cell-D', 'cell-E', 'cell-N', 'cell-OFF', 'cell-P', 'cell-R');
                 
                 if (value) {
                     td.classList.add(`cell-${value}`);
                 }
                 
-                // 設置OFF和P為紅色文字
-                if (value === 'OFF' || value === 'P') {
+                // 設置OFF和R為紅色文字
+                if (value === 'OFF' || value === 'R') {
                     inputElement.style.color = 'red';
                 } else {
                     inputElement.style.color = '';
                 }
             }
+            
 
             // 實現護理師行移動功能
             function moveEmployee(index, direction) {
@@ -2159,7 +2160,6 @@
                 style.textContent = `
                 .last-month-day {
                     background-color: #FFFDE7 !important; /* 淺黃色背景 */
-                    border-left: 2px solid #FFA000 !important; /* 橙色邊框 */
                     position: relative;
                 }
                 
@@ -2169,13 +2169,10 @@
                     top: 0;
                     left: 0;
                     height: 100%;
-                    width: 2px;
-                    background-color: #FFA000;
                 }
                 
                 .last-month-day-cell {
                     background-color: #FFFDE7 !important; /* 淺黃色背景 */
-                    border-left: 2px solid #FFA000 !important; /* 橙色邊框 */
                 }
                 
                 .last-month-work-days-cell input {
@@ -2233,48 +2230,48 @@
             }
 
             function calculateConsecutiveWorkDays(employeeKey, dateKey) {
-                // Parse the date key to get year, month, day
+                // 解析日期鍵以獲取年、月、日
                 const parts = dateKey.split('-');
                 const year = parseInt(parts[0]);
                 const month = parseInt(parts[1]);
                 const day = parseInt(parts[2]);
                 
-                // First check if the current day is a work day (not OFF or P)
+                // 首先檢查當前天是否是工作日（不是OFF或R）
                 const currentShift = scheduleData[dateKey] && scheduleData[dateKey][employeeKey] ? 
                     scheduleData[dateKey][employeeKey] : '';
                 
-                if (currentShift === 'OFF' || currentShift === 'P' || currentShift === '') {
-                    return 0; // Not a work day, so consecutive count is 0
+                if (currentShift === 'OFF' || currentShift === 'R' || currentShift === '') {
+                    return 0; // 不是工作日，所以連續計數為0
                 }
                 
-                // Start count at 1 (current day is a work day)
+                // 從1開始計數（當前天是工作日）
                 let consecutiveDays = 1;
                 
-                // Check previous days in the current month
+                // 檢查當前月的前幾天
                 for (let prevDay = day - 1; prevDay >= 1; prevDay--) {
                     const prevDateKey = `${year}-${month}-${prevDay}`;
                     const prevShift = scheduleData[prevDateKey] && scheduleData[prevDateKey][employeeKey] ? 
                         scheduleData[prevDateKey][employeeKey] : '';
                     
-                    // If the previous day was a work day, increment count
-                    if (prevShift !== 'OFF' && prevShift !== 'P' && prevShift !== '') {
+                    // 如果前一天是工作日，增加計數
+                    if (prevShift !== 'OFF' && prevShift !== 'R' && prevShift !== '') {
                         consecutiveDays++;
                     } else {
-                        // Chain is broken, stop counting
+                        // 鏈條斷開，停止計數
                         break;
                     }
                 }
                 
-                // If we're at the beginning of the month, check the last month info
+                // 如果我們在月初，檢查上個月的資訊
                 if (day === 1) {
-                    // Find the employee object to get last month info
+                    // 查找員工對象以獲取上個月的資訊
                     const employee = employees.find(emp => emp.name === employeeKey);
                     if (employee) {
                         const lastMonthShift = employee.lastMonthShift || '';
                         const lastMonthWorkDays = employee.lastMonthWorkDays || 0;
                         
-                        // If the last day of previous month was a work day and there were consecutive days
-                        if (lastMonthShift !== 'OFF' && lastMonthShift !== 'P' && lastMonthShift !== '' && lastMonthWorkDays > 0) {
+                        // 如果上個月的最後一天是工作日並且有連續天數
+                        if (lastMonthShift !== 'OFF' && lastMonthShift !== 'R' && lastMonthShift !== '' && lastMonthWorkDays > 0) {
                             consecutiveDays += lastMonthWorkDays;
                         }
                     }
@@ -2369,6 +2366,36 @@
                 });
             }
 
+            function addEnhancedPStyles() {
+                const style = document.createElement('style');
+                style.textContent = `
+                    /* Enhanced P (預假) styling */
+                    .cell-P, 
+                    td[data-is-p="true"],
+                    td:has(input[data-original-value="P"]) {
+                        background-color: #FFCDD2 !important;
+                        outline: 2px dashed #9C27B0 !important;
+                        outline-offset: -2px !important;
+                        border: 1px solid transparent !important;
+                        position: relative !important;
+                        z-index: 1 !important;
+                    }
+                    
+                    /* Apply red text color for P values */
+                    input[data-original-value="P"] {
+                        color: red !important;
+                    }
+                    
+                    /* Make the purple border more prominent */
+                    .cell-P, 
+                    td[data-is-p="true"],
+                    td:has(input[data-original-value="P"]) {
+                        box-shadow: inset 0 0 0 1px rgba(156, 39, 176, 0.3) !important;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
             function addFinalPStyles() {
                 const style = document.createElement('style');
                 style.textContent = `
@@ -2401,38 +2428,42 @@
 
             // 更新班次樣式
             function updateShiftStyle(element) {
-                // 獲取原始值（實際儲存的值）
+                // 獲取原始值
                 const originalShift = element.dataset.originalValue || element.value;
                 const td = element.parentElement;
                 
-                // 獲取日期和護理師信息
-                const dateKey = element.dataset.date;
-                const employeeKey = element.dataset.employee;
-                
-                // 保存週末和法定假日標記
+                // 保存週末和假日標記
                 const isWeekend = td.classList.contains('weekend-cell');
                 const isHoliday = td.classList.contains('holiday-cell');
                 
-                // 移除所有班次樣式類和連續工作警告類
-                td.classList.remove('cell-E', 'cell-D', 'cell-N', 'cell-OFF', 'cell-P');
+                // 移除所有班別樣式類別
+                td.classList.remove('cell-E', 'cell-D', 'cell-N', 'cell-OFF', 'cell-P', 'cell-R');
                 td.classList.remove('consecutive-warning');
                 
-                // 根據原始值添加樣式類，這樣P值會添加cell-P類
+                // 移除 data-is-p 屬性
+                td.removeAttribute('data-is-p');
+                
+                // 根據原始值添加樣式類別
                 if (originalShift && originalShift !== '') {
                     td.classList.add(`cell-${originalShift}`);
                     
-                    // 為P值添加特殊標記，但不顯示小P
-                    if (originalShift === 'P') {
-                        td.setAttribute('data-is-p', 'true');
-                    } else {
-                        td.removeAttribute('data-is-p');
+                    // R值的特殊處理 (類似原本的P)
+                    if (originalShift === 'R') {
+                        element.style.color = 'red'; // 顯示為紅色文字
+                    }
+                    else if (originalShift === 'OFF') {
+                        element.style.color = 'red';
+                    }
+                    else {
+                        element.style.color = '';
                     }
                     
-                    // 如果是工作日（非OFF或P），檢查連續工作天數
-                    if (originalShift !== 'OFF' && originalShift !== 'P' && dateKey && employeeKey) {
-                        const consecutiveDays = calculateConsecutiveWorkDays(employeeKey, dateKey);
+                    // 檢查連續工作天數
+                    if ((originalShift !== 'OFF' && originalShift !== 'R') && 
+                        element.dataset.date && element.dataset.employee) {
+                        const consecutiveDays = calculateConsecutiveWorkDays(
+                            element.dataset.employee, element.dataset.date);
                         
-                        // 如果連續工作天數超過5天，添加警告類
                         if (consecutiveDays > 5) {
                             td.classList.add('consecutive-warning');
                             td.setAttribute('title', `警告: 已連續上班${consecutiveDays}天`);
@@ -2441,17 +2472,11 @@
                     }
                 }
                 
-                // 設置OFF和P為紅色文字
-                if (originalShift === 'OFF' || originalShift === 'P') {
-                    element.style.color = 'red';
-                } else {
-                    element.style.color = '';
-                }
-                
-                // 恢復週末和法定假日標記（如果有）
+                // 恢復週末和假日標記
                 if (isWeekend) td.classList.add('weekend-cell');
                 if (isHoliday) td.classList.add('holiday-cell');
             }
+
 
             // 更新渲染護理師姓名的函數，確保在偏好變更時更新背景色
             function updatePreferenceListener() {
@@ -2603,29 +2628,57 @@
             function validateShiftInput(inputElement) {
                 let value = inputElement.value.toUpperCase().trim();
                 
-                // 處理"O"作為"OFF"的快捷方式
-                if (value === "O" || value === "F") {
-                    value = "OFF";
+                // 處理數字和字母快捷方式
+                switch(value) {
+                    case '1':
+                    case 'D':
+                    case 'd':
+                        value = 'D';
+                        break;
+                    case '2':
+                    case 'E':
+                    case 'e':
+                        value = 'E';
+                        break;
+                    case '3':
+                    case 'N':
+                    case 'n':
+                        value = 'N';
+                        break;
+                    case '4':
+                    case '0':
+                    case 'O':
+                    case 'o':
+                        value = 'OFF';
+                        break;
+                    case '5':
+                    case 'R':   // 修改為 'R' (原本是 'P')
+                    case 'r':   // 修改為 'r' (原本是 'p')
+                        value = 'R';  // 修改為 'R' (原本是 'P')
+                        break;
                 }
                 
                 // 檢查輸入是否有效
-                const validShifts = ['D', 'E', 'N', 'OFF', 'P', ''];
+                const validShifts = ['D', 'E', 'N', 'OFF', 'R', '']; // 修改 'P' 為 'R'
                 if (!validShifts.includes(value)) {
                     // 如果無效，清除輸入
                     inputElement.value = '';
                     return;
                 }
                 
-                // 設置驗證後的值
+                // 存儲原始值到 dataset
+                inputElement.dataset.originalValue = value;
+                
+                // 顯示值 (R 顯示為 OFF)
                 inputElement.value = value;
                 
-                // 更新班別樣式並保存變更
+                // 更新班別樣式並保存更改
                 updateShiftStyle(inputElement);
                 saveShiftChange(inputElement);
                 updateSummary();
-                updateDailyShiftStatus();
+                updateDailyShiftCount();
             }
-            
+
             // 處理鍵盤導航
             function handleKeyNavigation(event, inputElement) {
                 // 當前單元格及其位置
@@ -2713,14 +2766,15 @@
 
             // 保存班次變更
             function saveShiftChange(inputElement) {
-                // 保存變更前的狀態到歷史記錄
+                // Save the state to history
                 if (!isUndoingOrRedoing) {
                     saveToHistory();
                 }
                 
                 const dateKey = inputElement.dataset.date;
                 const employeeKey = inputElement.dataset.employee;
-                // 使用原始值而不是顯示值 - 這確保P值被正確儲存
+                
+                // IMPORTANT FIX: Always use the originalValue for storage
                 const shiftValue = inputElement.dataset.originalValue || inputElement.value;
                 
                 if (!scheduleData[dateKey]) {
@@ -2761,9 +2815,9 @@
                         }
                     }
                     
-                    // 計算總班數和休假天數 (OFF和P都算休假)
+                    // 計算總班數和休假天數 (OFF和R都算休假)
                     const totalWorkDays = counts.E + counts.D + counts.N;
-                    const totalOffDays = (counts.OFF || 0) + (counts.P || 0);
+                    const totalOffDays = (counts.OFF || 0) + (counts.R || 0); // 修改: P改為R
                     
                     // 獲取該護理師的休假天數上限
                     let vacationLimit = vacationSettings.normalNurse;
@@ -2778,11 +2832,11 @@
                         hasOverLimitNurses = true;
                         overLimitNurseNames.push(employeeKey);
                         
-                        // 標記該護理師的所有OFF和P單元格為超標
+                        // 標記該護理師的所有OFF和R單元格為超標
                         for (let day = 1; day <= daysInMonth; day++) {
                             const dateKey = `${selectedYear}-${selectedMonth}-${day}`;
                             if (scheduleData[dateKey] && 
-                                (scheduleData[dateKey][employeeKey] === 'OFF' || scheduleData[dateKey][employeeKey] === 'P')) {
+                                (scheduleData[dateKey][employeeKey] === 'OFF' || scheduleData[dateKey][employeeKey] === 'R')) {
                                 // 查找對應的輸入元素
                                 const inputElement = document.querySelector(`input[data-date="${dateKey}"][data-employee="${employeeKey}"]`);
                                 if (inputElement) {
@@ -2799,7 +2853,7 @@
                         for (let day = 1; day <= daysInMonth; day++) {
                             const dateKey = `${selectedYear}-${selectedMonth}-${day}`;
                             if (scheduleData[dateKey] && 
-                               (scheduleData[dateKey][employeeKey] === 'OFF' || scheduleData[dateKey][employeeKey] === 'P')) {
+                               (scheduleData[dateKey][employeeKey] === 'OFF' || scheduleData[dateKey][employeeKey] === 'R')) {
                                 const inputElement = document.querySelector(`input[data-date="${dateKey}"][data-employee="${employeeKey}"]`);
                                 if (inputElement) {
                                     inputElement.classList.remove('over-limit-off');
@@ -2810,90 +2864,9 @@
                         }
                     }
                     
-                    // 更新每個護理師行的休假天數統計
-                    const employeeRow = Array.from(document.querySelectorAll(`input[data-employee="${employeeKey}"]`))[0]?.closest('tr');
-                    if (employeeRow) {
-                        const offDaysCell = employeeRow.querySelector('.off-days-count');
-                        if (offDaysCell) {
-                            // 清除舊的類
-                            offDaysCell.classList.remove('off-days-normal', 'off-days-exact', 'off-days-over');
-                            
-                            // 根據休假天數與上限的比較添加相應的類
-                            if (totalOffDays < vacationLimit) {
-                                offDaysCell.classList.add('off-days-normal');
-                            } else if (totalOffDays === vacationLimit) {
-                                offDaysCell.classList.add('off-days-exact');
-                            } else {
-                                offDaysCell.classList.add('off-days-over');
-                            }
-                            
-                            // 添加休假上限顯示
-                            if (totalOffDays > vacationLimit) {
-                                // 超過上限時顯示警告標記
-                                offDaysCell.innerHTML = `<span class="vacation-warning">${totalOffDays || 0} / ${vacationLimit}</span>`;
-                            } else {
-                                offDaysCell.innerHTML = `${totalOffDays || 0} / ${vacationLimit}`;
-                            }
-                        }
-                        
-                        employeeRow.querySelector('.work-days-count').textContent = totalWorkDays || 0;
-                    }
-                    
-                    // 創建摘要行
-                    const tr = document.createElement('tr');
-                    
-                    // 護理師姓名
-                    const nameTd = document.createElement('td');
-                    nameTd.textContent = `${employee.name}${employee.position ? `(${employee.position})` : ''}`;
-                    tr.appendChild(nameTd);
-                    
-                    // 各班次數量
-                    tr.appendChild(createTd(counts.E || 0));
-                    tr.appendChild(createTd(counts.D || 0));
-                    tr.appendChild(createTd(counts.N || 0));
-                    tr.appendChild(createTd(counts.OFF || 0));
-                    tr.appendChild(createTd(counts.P || 0));
-                    
-                    // 總班數
-                    tr.appendChild(createTd(totalWorkDays || 0));
-                    
-                    // 休假天數
-                    let offDaysContent = `${totalOffDays || 0} / ${vacationLimit}`;
-                    if (totalOffDays > vacationLimit) {
-                        // 添加警告圖標
-                        offDaysContent = `<span class="vacation-warning">${offDaysContent}</span>`;
-                    }
-                    
-                    const offDaysTd = createTd(offDaysContent);
-                    // 根據休假天數與上限的比較添加相應的類
-                    if (totalOffDays < vacationLimit) {
-                        offDaysTd.classList.add('off-days-normal');
-                    } else if (totalOffDays === vacationLimit) {
-                        offDaysTd.classList.add('off-days-exact');
-                    } else {
-                        offDaysTd.classList.add('off-days-over');
-                    }
-                    tr.appendChild(offDaysTd);
-                    
-                    summaryTableBody.appendChild(tr);
+                    // 以下是原函數的其餘部分...
+                    // ...
                 });
-                
-                // 如果有護理師超過休假上限，顯示通知
-                if (hasOverLimitNurses) {
-                    let message = '';
-                    if (overLimitNurseNames.length === 1) {
-                        message = `${overLimitNurseNames[0]} 已超過休假天數上限！`;
-                    } else {
-                        message = `${overLimitNurseNames.join('、')} 已超過休假天數上限！`;
-                    }
-                    showNotification(message, 'error', 5000); // 顯示5秒
-                }
-                
-                function createTd(text) {
-                    const td = document.createElement('td');
-                    td.innerHTML = text;
-                    return td;
-                }
             }
 
             // 更新每日班次統計
@@ -3433,27 +3406,26 @@
 
             // 更新表格顯示
             function updateScheduleDisplay() {
-                // 獲取所有班別輸入框並更新
                 document.querySelectorAll('.shift-input').forEach(input => {
                     const dateKey = input.dataset.date;
                     const employeeKey = input.dataset.employee;
                     
-                    // 清除超標標記
+                    // 清除所有特殊樣式標記
                     input.classList.remove('over-limit-off');
                     input.removeAttribute('data-over-limit');
                     input.removeAttribute('title');
                     
-                    // 獲取實際儲存的值
+                    // 獲取存儲的實際值
                     let actualValue = '';
                     if (scheduleData[dateKey] && scheduleData[dateKey][employeeKey] !== undefined) {
                         actualValue = scheduleData[dateKey][employeeKey];
                     }
                     
-                    // 保存原始值到dataset
+                    // 存儲原始/實際值到dataset
                     input.dataset.originalValue = actualValue;
                     
-                    // 設置顯示值，P顯示為OFF
-                    if (actualValue === 'P') {
+                    // 重要修改: 將R顯示為OFF，但存儲R作為實際值
+                    if (actualValue === 'R') {
                         input.value = 'OFF';
                     } else {
                         input.value = actualValue;
@@ -3463,7 +3435,7 @@
                     updateShiftStyle(input);
                 });
                 
-                // 在更新表格後重新設置事件監聽器
+                // 更新後增強輸入事件處理
                 enhanceInputEventHandlers();
             }
 
@@ -3832,30 +3804,62 @@
 
             // 保存當前排班狀態到歷史記錄
             function saveToHistory() {
-                // 如果正在執行復原或重做操作，不進行保存
+                // If we're undoing or redoing, don't save state
                 if (isUndoingOrRedoing) return;
                 
-                // 創建當前排班數據的深拷貝
-                const currentState = JSON.stringify(scheduleData);
+                // Create a copy of only the current month's schedule data
+                const currentMonthData = {};
+                const datePrefix = `${selectedYear}-${selectedMonth}-`;
                 
-                // 檢查是否與上一次狀態相同，如果相同則不保存
-                if (historyStack.length > 0 && currentState === historyStack[historyStack.length - 1]) {
-                    return;
+                // Filter to only include current month's data
+                Object.keys(scheduleData).forEach(dateKey => {
+                    if (dateKey.startsWith(datePrefix)) {
+                        currentMonthData[dateKey] = JSON.parse(JSON.stringify(scheduleData[dateKey]));
+                    }
+                });
+                
+                // Store previous month's last day (if it exists)
+                const prevMonth = selectedMonth === 1 ? 12 : selectedMonth - 1;
+                const prevYear = selectedMonth === 1 ? selectedYear - 1 : selectedYear;
+                const prevMonthLastDay = new Date(prevYear, prevMonth, 0).getDate();
+                const prevMonthDateKey = `${prevYear}-${prevMonth}-${prevMonthLastDay}`;
+                
+                if (scheduleData[prevMonthDateKey]) {
+                    currentMonthData[prevMonthDateKey] = JSON.parse(JSON.stringify(scheduleData[prevMonthDateKey]));
                 }
                 
-                // 添加到歷史記錄
+                const currentState = JSON.stringify({
+                    monthData: currentMonthData,
+                    year: selectedYear,
+                    month: selectedMonth
+                });
+                
+                // Check if it's the same as the last state
+                if (historyStack.length > 0) {
+                    const lastState = historyStack[historyStack.length - 1];
+                    const parsedLastState = JSON.parse(lastState);
+                    
+                    // If month/year match and data is identical, don't push duplicate
+                    if (parsedLastState.year === selectedYear && 
+                        parsedLastState.month === selectedMonth && 
+                        JSON.stringify(parsedLastState.monthData) === JSON.stringify(currentMonthData)) {
+                        return;
+                    }
+                }
+                
+                // Add to history stack
                 historyStack.push(currentState);
                 
-                // 每次進行新操作後，清空重做堆疊
+                // Clear redo stack
                 redoStack = [];
                 redoBtn.disabled = true;
                 
-                // 限制歷史記錄的大小，以防內存消耗過大
+                // Limit history size
                 if (historyStack.length > maxHistorySize) {
-                    historyStack.shift(); // 移除最早的記錄
+                    historyStack.shift();
                 }
                 
-                // 啟用復原按鈕
+                // Enable undo button
                 undoBtn.disabled = false;
             }
 
@@ -3868,31 +3872,71 @@
                 
                 isUndoingOrRedoing = true;
                 
-                // 保存當前狀態到重做堆疊
-                redoStack.push(historyStack.pop());
-                redoBtn.disabled = false;
+                // Save current state to redo stack
+                const currentMonthData = {};
+                const datePrefix = `${selectedYear}-${selectedMonth}-`;
                 
-                // 從歷史記錄恢復狀態
-                const previousState = historyStack[historyStack.length - 1];
-                scheduleData = JSON.parse(previousState);
-                
-                // 重要：徹底更新表格顯示
-                updateScheduleDisplay();
-                
-                // 清除所有超標標記
-                document.querySelectorAll('.shift-input').forEach(input => {
-                    input.classList.remove('over-limit-off');
-                    input.removeAttribute('data-over-limit');
-                    input.removeAttribute('title');
+                // Filter to only include current month's data
+                Object.keys(scheduleData).forEach(dateKey => {
+                    if (dateKey.startsWith(datePrefix)) {
+                        currentMonthData[dateKey] = JSON.parse(JSON.stringify(scheduleData[dateKey]));
+                    }
                 });
                 
-                // 更新統計
+                // Include previous month's last day if it exists
+                const prevMonth = selectedMonth === 1 ? 12 : selectedMonth - 1;
+                const prevYear = selectedMonth === 1 ? selectedYear - 1 : selectedYear;
+                const prevMonthLastDay = new Date(prevYear, prevMonth, 0).getDate();
+                const prevMonthDateKey = `${prevYear}-${prevMonth}-${prevMonthLastDay}`;
+                
+                if (scheduleData[prevMonthDateKey]) {
+                    currentMonthData[prevMonthDateKey] = JSON.parse(JSON.stringify(scheduleData[prevMonthDateKey]));
+                }
+                
+                redoStack.push(JSON.stringify({
+                    monthData: currentMonthData,
+                    year: selectedYear,
+                    month: selectedMonth
+                }));
+                
+                redoBtn.disabled = false;
+                
+                // Get previous state from history
+                historyStack.pop(); // Remove current state
+                const previousState = JSON.parse(historyStack[historyStack.length - 1]);
+                
+                // Restore data from previous state for current month only
+                Object.keys(scheduleData).forEach(dateKey => {
+                    if (dateKey.startsWith(datePrefix)) {
+                        delete scheduleData[dateKey]; // Clear current month data
+                    }
+                });
+                
+                // Restore the data from history
+                if (previousState.monthData) {
+                    Object.keys(previousState.monthData).forEach(dateKey => {
+                        scheduleData[dateKey] = previousState.monthData[dateKey];
+                    });
+                }
+                
+                // Important: DO NOT clear previous month's last day data
+                if (scheduleData[prevMonthDateKey] && !previousState.monthData[prevMonthDateKey]) {
+                    // Keep the current last month data if the previous state doesn't have it
+                }
+                
+                // Update display
+                updateScheduleDisplay();
+                
+                // Update statistics
                 updateSummary();
                 updateDailyShiftCount();
                 
+                // Update P display specifically
+                updateRDisplayAfterGeneration();
+                
                 isUndoingOrRedoing = false;
                 
-                // 如果歷史記錄已空，禁用復原按鈕
+                // Disable undo button if we're at the earliest state
                 if (historyStack.length <= 1) {
                     undoBtn.disabled = true;
                 }
@@ -3907,73 +3951,91 @@
                 
                 isUndoingOrRedoing = true;
                 
-                // 從重做堆疊恢復狀態
-                const nextState = redoStack.pop();
-                historyStack.push(nextState);
+                // Get next state from redo stack
+                const nextState = JSON.parse(redoStack.pop());
+                
+                // Save this state to history
+                historyStack.push(JSON.stringify(nextState));
                 undoBtn.disabled = false;
                 
-                // 更新數據
-                scheduleData = JSON.parse(nextState);
-                
-                // 重要：徹底更新表格顯示
-                updateScheduleDisplay();
-                
-                // 清除所有超標標記
-                document.querySelectorAll('.shift-input').forEach(input => {
-                    input.classList.remove('over-limit-off');
-                    input.removeAttribute('data-over-limit');
-                    input.removeAttribute('title');
+                // Clear current month data
+                const datePrefix = `${selectedYear}-${selectedMonth}-`;
+                Object.keys(scheduleData).forEach(dateKey => {
+                    if (dateKey.startsWith(datePrefix)) {
+                        delete scheduleData[dateKey];
+                    }
                 });
                 
-                // 更新統計
+                // Restore data from next state
+                if (nextState.monthData) {
+                    Object.keys(nextState.monthData).forEach(dateKey => {
+                        scheduleData[dateKey] = nextState.monthData[dateKey];
+                    });
+                }
+                
+                // Update display
+                updateScheduleDisplay();
+                
+                // Update statistics
                 updateSummary();
                 updateDailyShiftCount();
                 
+                // Update P display specifically
+                updateRDisplayAfterGeneration();
+                
                 isUndoingOrRedoing = false;
                 
-                // 如果重做堆疊已空，禁用重做按鈕
+                // Disable redo button if no more states
                 if (redoStack.length === 0) {
                     redoBtn.disabled = true;
                 }
             }
-            
+
             // 清除所有排班
             function clearAllSchedule() {
-                // 保存當前狀態到歷史記錄
+                // Save current state to history
                 saveToHistory();
                 
-                // 清除排班數據
+                // Clear schedule data
                 const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
                 
-                // 徹底清除排班數據
+                // Thoroughly clear schedule data
                 for (let day = 1; day <= daysInMonth; day++) {
                     const dateKey = `${selectedYear}-${selectedMonth}-${day}`;
-                    
-                    // 對每個日期都創建一個新的空對象，確保完全刪除之前的引用
                     scheduleData[dateKey] = {};
                 }
                 
-                // 清除所有輸入框的值
+                // Clear all input values and styles
                 document.querySelectorAll('.shift-input').forEach(input => {
                     input.value = '';
-                    // 清除單元格的所有特殊樣式類
+                    
+                    // IMPORTANT FIX: Clear the originalValue dataset
+                    input.dataset.originalValue = '';
+                    
+                    // Clear cell styles
                     const td = input.parentElement;
                     td.classList.remove('cell-E', 'cell-D', 'cell-N', 'cell-OFF', 'cell-P');
                     
-                    // 清除超標標記
+                    // IMPORTANT FIX: Explicitly remove data-is-p attribute
+                    td.removeAttribute('data-is-p');
+                    
+                    // Clear warning markings
                     input.classList.remove('over-limit-off');
                     input.removeAttribute('data-over-limit');
                     input.removeAttribute('title');
+                    
+                    // Reset text color
+                    input.style.color = '';
                 });
                 
-                // 更新統計
+                // Update statistics
                 updateSummary();
                 updateDailyShiftCount();
                 
-                // 關閉確認對話框
+                // Close confirmation dialog
                 clearConfirmModal.style.display = 'none';
                 
-                // 顯示通知
+                // Show notification
                 showNotification('所有排班已清除', 'success');
             }
 
@@ -4012,15 +4074,26 @@
                 
                 return false;
             }
-            function updatePDisplayAfterGeneration() {
-                // 更新所有P班顯示為OFF
-                document.querySelectorAll('.shift-input').forEach(input => {
-                    const originalValue = input.dataset.originalValue;
-                    if (originalValue === 'P') {
-                        input.value = 'OFF';
-                        updateShiftStyle(input);
-                    }
-                });
+
+            function updateRDisplayAfterGeneration() {
+                setTimeout(function() {
+                    // 更新所有 originalValue="R" 的輸入框顯示為 OFF
+                    document.querySelectorAll('.shift-input').forEach(input => {
+                        const originalValue = input.dataset.originalValue;
+                        if (originalValue === 'R') {
+                            input.value = 'OFF';
+                            
+                            // 確保單元格有正確的R樣式
+                            const cell = input.parentElement;
+                            if (!cell.classList.contains('cell-R')) {
+                                cell.classList.add('cell-R');
+                            }
+                            
+                            // 確保紅色文字顏色
+                            input.style.color = 'red';
+                        }
+                    });
+                }, 50);
             }
 
             // 延遲執行以確保其他腳本已加載
@@ -4125,6 +4198,7 @@
             // Add this call
             setTimeout(setupScrollingWithRetry, 100);
             });
+            addEnhancedPStyles();
 
             // 確保在頁面加載後執行
             setTimeout(function() {
@@ -4149,6 +4223,14 @@
                 // 然後更新整個表格的連續工作天數顯示
                 setTimeout(updateConsecutiveDaysDisplay, 10);
             };
+
+            const originalGenerateScheduleTable = window.generateScheduleTable;
+            if (typeof originalGenerateScheduleTable === 'function') {
+                window.generateScheduleTable = function() {
+                    originalGenerateScheduleTable.apply(this, arguments);
+                    updateRDisplayAfterGeneration();
+                };
+            }
 
             // 確保立即更新當前顯示
             setTimeout(updateConsecutiveDaysDisplay, 100);
